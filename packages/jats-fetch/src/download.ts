@@ -5,6 +5,8 @@ import type { ISession } from 'myst-cli-utils';
 import { isUrl, tic } from 'myst-cli-utils';
 import {
   constructJatsUrlFromPubMedCentral,
+  convertDOI2PMCID,
+  convertPMID2PMCID,
   getListingsFile,
   getPubMedJatsFromData,
   getPubMedJatsFromS3,
@@ -189,6 +191,21 @@ export async function jatsFetch(
     filename = `${foldername}.xml`;
     if (!output) {
       output = foldername;
+    }
+  }
+  if (input.match(/^[0-9]+$/)) {
+    // If input is a number, assume it is PMID and try to resolve PMC ID
+    const pmcid = await convertPMID2PMCID(session, input);
+    if (pmcid) {
+      session.log.debug(`Resolved input ${input} to PMC ID: ${pmcid}`);
+      input = pmcid;
+    }
+  }
+  if (doi.validate(input)) {
+    const pmcid = await convertDOI2PMCID(session, input);
+    if (pmcid) {
+      session.log.debug(`Resolved input ${input} to PMC ID: ${pmcid}`);
+      input = pmcid;
     }
   }
   if (!output) output = opts.data ? `${input}` : '.';
