@@ -140,6 +140,11 @@ export async function convertPMCID2DOI(session: ISession, pmcid: string, opts?: 
   return pmDoi;
 }
 
+export async function convertDOI2PMCID(session: ISession, input: string, opts?: ResolutionOptions) {
+  const pmDoi = await convertId(session, input, 'doi', 'pmcid', opts);
+  return pmDoi;
+}
+
 /**
  * Query NIH APIs for single DOI from PubMed ID
  */
