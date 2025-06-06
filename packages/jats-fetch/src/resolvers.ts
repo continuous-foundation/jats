@@ -1,6 +1,6 @@
 import { doi } from 'doi-utils';
 import fetch from 'node-fetch';
-import type { ISession, ResolutionOptions, Resolver } from './types.js';
+import type { Fetcher, ISession, ResolutionOptions, Resolver } from './types.js';
 
 export const elife: Resolver = {
   test(url: string) {
@@ -33,7 +33,23 @@ export const joss: Resolver = {
   },
 };
 
-export const DEFAULT_RESOLVERS: Resolver[] = [elife, plos, joss];
+export const biorxiv: Resolver = {
+  test(url: string) {
+    return new URL(url).hostname === 'www.biorxiv.org';
+  },
+  async jatsUrl(url: string, fetcher?: Fetcher) {
+    const resp = await (fetcher ?? fetch)(url);
+    const xmlUrl = (await resp.text()).match(
+      /https:\/\/www\.biorxiv\.org\/content\/biorxiv\/[^\s]+\.full\.pdf/,
+    );
+    if (!xmlUrl) {
+      throw new Error(`Could not resolve JATS for biorxiv URL: ${url}`);
+    }
+    return xmlUrl[0].replace('.full.pdf', '.source.xml');
+  },
+};
+
+export const DEFAULT_RESOLVERS: Resolver[] = [biorxiv, elife, plos, joss];
 
 /**
  * Use the known custom resolvers to pick where the JATS should be downloaded from.
@@ -41,7 +57,7 @@ export const DEFAULT_RESOLVERS: Resolver[] = [elife, plos, joss];
 export async function customResolveJatsUrlFromDoi(
   session: ISession,
   doiString: string,
-  opts: ResolutionOptions = { resolvers: DEFAULT_RESOLVERS },
+  opts?: ResolutionOptions,
 ): Promise<string> {
   if (!doi.validate(doiString)) throw new Error(`The doi ${doiString} is not valid`);
   const doiUrl = doi.buildUrl(doiString) as string;
@@ -49,8 +65,9 @@ export async function customResolveJatsUrlFromDoi(
   const resp = await (opts?.fetcher ?? fetch)(doiUrl);
   const articleUrl = resp.url;
   session.log.debug(`Found resolved URL for DOI at ${articleUrl}`);
-  const resolver = opts?.resolvers?.find((r) => r.test(articleUrl));
+  const resolvers = opts?.resolvers ?? DEFAULT_RESOLVERS;
+  const resolver = resolvers?.find((r) => r.test(articleUrl));
   if (!resolver) throw new Error(`Could not resolve JATS for ${articleUrl}, no resolver matched`);
-  const jatsUrl = resolver.jatsUrl(articleUrl);
+  const jatsUrl = await resolver.jatsUrl(articleUrl, opts?.fetcher);
   return jatsUrl;
 }
