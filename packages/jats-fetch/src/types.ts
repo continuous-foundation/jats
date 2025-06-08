@@ -5,7 +5,7 @@ export type ISession = BaseISession;
 
 export interface Resolver {
   test: (url: string) => boolean;
-  jatsUrl: (url: string) => string;
+  jatsUrl: (url: string, fetcher?: Fetcher) => string | Promise<string>;
 }
 
 export type Fetcher = (
