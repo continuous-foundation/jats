@@ -1,5 +1,11 @@
 # jats-tags
 
+## 1.0.16
+
+### Patch Changes
+
+- 15cd57e: Support figures with media instead of graphics
+
 ## 1.0.15
 
 ### Patch Changes

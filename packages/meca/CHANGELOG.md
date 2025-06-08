@@ -1,5 +1,13 @@
 # meca
 
+## 1.0.16
+
+### Patch Changes
+
+- Updated dependencies [15cd57e]
+  - jats-xml@1.0.16
+  - jats-utils@1.0.16
+
 ## 1.0.15
 
 ### Patch Changes

@@ -1,5 +1,12 @@
 # jats-fetch
 
+## 1.0.16
+
+### Patch Changes
+
+- 7adb975: Add biorxiv resolver
+- b980e20: Download PMC data from doi/pmid input
+
 ## 1.0.15
 
 ## 1.0.14

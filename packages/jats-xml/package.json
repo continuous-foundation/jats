@@ -1,6 +1,6 @@
 {
   "name": "jats-xml",
-  "version": "1.0.15",
+  "version": "1.0.16",
   "description": "Types and utilities for working with JATS in Typescript",
   "author": "Rowan Cockett <rowan@continuous.foundation>",
   "homepage": "https://github.com/continuous-foundation/jats",
@@ -40,8 +40,8 @@
   "dependencies": {
     "adm-zip": "^0.5.10",
     "doi-utils": "^2.0.3",
-    "jats-tags": "^1.0.15",
-    "jats-utils": "^1.0.15",
+    "jats-tags": "^1.0.16",
+    "jats-utils": "^1.0.16",
     "myst-cli-utils": "^2.0.11",
     "myst-common": "^1.7.5",
     "myst-frontmatter": "^1.7.5",

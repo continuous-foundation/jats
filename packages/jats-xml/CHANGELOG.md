@@ -1,5 +1,14 @@
 # jats-xml
 
+## 1.0.16
+
+### Patch Changes
+
+- 15cd57e: Do not error on top=level xml comment in jats
+- Updated dependencies [15cd57e]
+  - jats-tags@1.0.16
+  - jats-utils@1.0.16
+
 ## 1.0.15
 
 ### Patch Changes

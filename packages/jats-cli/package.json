@@ -1,6 +1,6 @@
 {
   "name": "jats-cli",
-  "version": "1.0.15",
+  "version": "1.0.16",
   "description": "Typescript CLI for with JATS",
   "author": "Rowan Cockett <rowan@continuous.foundation>",
   "homepage": "https://github.com/continuous-foundation/jats",
@@ -45,11 +45,11 @@
   "dependencies": {
     "doi-utils": "^2.0.0",
     "fair-principles": "^2.0.0",
-    "jats-convert": "^1.0.15",
-    "jats-fetch": "^1.0.15",
-    "jats-tags": "^1.0.15",
-    "jats-utils": "^1.0.15",
-    "jats-xml": "^1.0.15",
+    "jats-convert": "^1.0.16",
+    "jats-fetch": "^1.0.16",
+    "jats-tags": "^1.0.16",
+    "jats-utils": "^1.0.16",
+    "jats-xml": "^1.0.16",
     "js-yaml": "^4.1.0",
     "unist-util-is": "^5.2.1",
     "unist-util-select": "^4.0.0"
