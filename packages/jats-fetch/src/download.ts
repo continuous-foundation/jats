@@ -116,12 +116,24 @@ export async function downloadJatsFromUrl(
     const data = fs.readFileSync(urlOrDoi).toString();
     return { success: true, source: urlOrDoi, data };
   }
-  const expectedUrls = (
-    await Promise.all([
-      constructJatsUrlFromPubMedCentral(session, urlOrDoi, opts),
-      getJatsUrlFromDoi(session, urlOrDoi, opts),
-    ])
-  ).filter((u): u is string => !!u);
+  const expectedUrls: string[] = [];
+  try {
+    // Custom resolvers are prioritized; in these cases we will know more about the "flavor" of the JATS
+    expectedUrls.push(await customResolveJatsUrlFromDoi(session, urlOrDoi, opts));
+  } catch {
+    session.log.debug(`No custom resolvers match ${urlOrDoi}`);
+  }
+  expectedUrls.push(
+    ...(
+      await Promise.all([
+        constructJatsUrlFromPubMedCentral(session, urlOrDoi, opts),
+        getJatsUrlFromDoi(session, urlOrDoi, opts),
+      ])
+    ).filter((u): u is string => !!u),
+  );
+  if (isUrl(urlOrDoi)) {
+    expectedUrls.push(urlOrDoi);
+  }
   if (expectedUrls.length > 0) {
     session.log.debug(['Trying URLs:\n', ...expectedUrls.map((url) => ` ${url}\n`)].join('  - '));
     for (let index = 0; index < expectedUrls.length; index++) {
@@ -133,27 +145,9 @@ export async function downloadJatsFromUrl(
         session.log.debug((error as Error).message);
       }
     }
-    // If there are expected URLs that don't work, report them and do not try other resolvers
     return { success: false, source: expectedUrls[0] };
   }
-  try {
-    if (doi.validate(urlOrDoi)) {
-      const jatsUrl = await customResolveJatsUrlFromDoi(session, urlOrDoi, opts);
-      const data = await downloadFromUrl(session, jatsUrl, opts);
-      return { success: true, source: jatsUrl, data };
-    }
-    if (isUrl(urlOrDoi)) {
-      session.log.debug(
-        "No resolver matched, and the URL doesn't look like a DOI. We will attempt to download it directly.",
-      );
-      const data = await downloadFromUrl(session, urlOrDoi, opts);
-      return { success: true, source: urlOrDoi, data };
-    }
-  } catch (error) {
-    session.log.debug((error as Error).message);
-    return { success: false, source: urlOrDoi };
-  }
-  session.log.debug(`Could not find ${urlOrDoi} locally, and it doesn't look like a URL or DOI`);
+  session.log.debug(`Could not find ${urlOrDoi} locally or resolve it to a valid JATS url`);
   return { success: false, source: urlOrDoi };
 }
 
