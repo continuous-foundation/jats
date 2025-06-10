@@ -1,5 +1,11 @@
 # jats-fetch
 
+## 1.0.18
+
+### Patch Changes
+
+- f0bc51a: Refactor ordering of attempted fetch methods
+
 ## 1.0.17
 
 ### Patch Changes

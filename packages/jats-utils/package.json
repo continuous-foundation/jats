@@ -1,6 +1,6 @@
 {
   "name": "jats-utils",
-  "version": "1.0.17",
+  "version": "1.0.18",
   "description": "Utility functions for working with JATS in Typescript",
   "author": "Rowan Cockett <rowan@continuous.foundation>",
   "homepage": "https://github.com/continuous-foundation/jats",
@@ -39,10 +39,10 @@
   },
   "peerDependencies": {
     "xml-js": "^1",
-    "jats-tags": "^1.0.17"
+    "jats-tags": "^1.0.18"
   },
   "devDependencies": {
     "myst-common": "^1.0.0",
-    "jats-tags": "^1.0.17"
+    "jats-tags": "^1.0.18"
   }
 }

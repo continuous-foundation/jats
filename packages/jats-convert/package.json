@@ -1,6 +1,6 @@
 {
   "name": "jats-convert",
-  "version": "1.0.17",
+  "version": "1.0.18",
   "description": "Read JATS and convert to MyST-spec frontmatter and AST",
   "author": "Rowan Cockett <rowan@continuous.foundation>",
   "homepage": "https://github.com/continuous-foundation/jats/tree/main/packages/jats-convert",
@@ -38,9 +38,9 @@
   "dependencies": {
     "doi-utils": "^2.0.6",
     "dotenv": "^16.4.5",
-    "jats-fetch": "^1.0.17",
-    "jats-tags": "^1.0.17",
-    "jats-xml": "^1.0.17",
+    "jats-fetch": "^1.0.18",
+    "jats-tags": "^1.0.18",
+    "jats-xml": "^1.0.18",
     "js-yaml": "^4.1.0",
     "mathml-to-latex": "^1.3.0",
     "myst-cli-utils": "^2.0.11",
