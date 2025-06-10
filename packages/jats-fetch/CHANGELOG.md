@@ -1,5 +1,12 @@
 # jats-fetch
 
+## 1.0.17
+
+### Patch Changes
+
+- 1cafc2a: Bump doi-utils version
+- 1cafc2a: Prioritize custom resolver jats urls over pmc/doi
+
 ## 1.0.16
 
 ### Patch Changes

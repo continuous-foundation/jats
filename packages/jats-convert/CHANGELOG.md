@@ -1,5 +1,16 @@
 # jats-convert
 
+## 1.0.17
+
+### Patch Changes
+
+- 1cafc2a: Bump doi-utils version
+- Updated dependencies [1cafc2a]
+- Updated dependencies [1cafc2a]
+  - jats-fetch@1.0.17
+  - jats-xml@1.0.17
+  - jats-tags@1.0.17
+
 ## 1.0.16
 
 ### Patch Changes

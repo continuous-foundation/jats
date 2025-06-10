@@ -1,5 +1,11 @@
 # jats-utils
 
+## 1.0.17
+
+### Patch Changes
+
+- jats-tags@1.0.17
+
 ## 1.0.16
 
 ### Patch Changes
