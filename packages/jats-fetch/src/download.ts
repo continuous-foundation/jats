@@ -20,7 +20,7 @@ import { defaultFetcher } from './utils.js';
  *
  * Throws on bad response and warns if response content type is not xml
  */
-async function downloadFromUrl(
+async function downloadFromUrlOrThrow(
   session: ISession,
   jatsUrl: string,
   opts: ResolutionOptions,
@@ -50,6 +50,23 @@ async function downloadFromUrl(
   }
   session.log.debug(toc(`Fetched document with content-type "${contentType}" in %s`));
   return data;
+}
+
+/**
+ * Attempt to download JATS from url and return success or fail download result
+ */
+async function downloadFromUrl(
+  session: ISession,
+  jatsUrl: string,
+  opts: ResolutionOptions,
+): Promise<DownloadResult> {
+  try {
+    const data = await downloadFromUrlOrThrow(session, jatsUrl, opts);
+    if (data) return { success: true, source: jatsUrl, data };
+  } catch (error) {
+    session.log.debug((error as Error).message);
+  }
+  return { success: false, source: jatsUrl };
 }
 
 type DoiLink = {
@@ -101,54 +118,56 @@ async function getJatsUrlFromDoi(
 /**
  * Attempt to download JATS from provided input
  *
- * `urlOrDoi` may be (1) a local file, in which case, the file content is
+ * `urlOrId` may be (1) a local file, in which case, the file content is
  * directly returned, (2) PubMed ID, PubMed Central ID, or DOI, in which case,
  * possible download links are constructed and followed, or (3) a direct
  * download URL, in which case, the content is fetched.
  */
 export async function downloadJatsFromUrl(
   session: ISession,
-  urlOrDoi: string,
+  urlOrId: string,
   opts: ResolutionOptions = {},
 ): Promise<DownloadResult> {
-  if (fs.existsSync(urlOrDoi)) {
-    session.log.debug(`JATS returned from local file ${urlOrDoi}`);
-    const data = fs.readFileSync(urlOrDoi).toString();
-    return { success: true, source: urlOrDoi, data };
+  let result: DownloadResult = { success: false, source: urlOrId };
+  if (fs.existsSync(urlOrId)) {
+    session.log.debug(`JATS returned from local file ${urlOrId}`);
+    const data = fs.readFileSync(urlOrId).toString();
+    return { success: true, source: urlOrId, data };
   }
-  const expectedUrls: string[] = [];
-  try {
-    // Custom resolvers are prioritized; in these cases we will know more about the "flavor" of the JATS
-    expectedUrls.push(await customResolveJatsUrlFromDoi(session, urlOrDoi, opts));
-  } catch {
-    session.log.debug(`No custom resolvers match ${urlOrDoi}`);
-  }
-  expectedUrls.push(
-    ...(
-      await Promise.all([
-        constructJatsUrlFromPubMedCentral(session, urlOrDoi, opts),
-        getJatsUrlFromDoi(session, urlOrDoi, opts),
-      ])
-    ).filter((u): u is string => !!u),
-  );
-  if (isUrl(urlOrDoi)) {
-    expectedUrls.push(urlOrDoi);
-  }
-  if (expectedUrls.length > 0) {
-    session.log.debug(['Trying URLs:\n', ...expectedUrls.map((url) => ` ${url}\n`)].join('  - '));
-    for (let index = 0; index < expectedUrls.length; index++) {
-      const url = expectedUrls[index];
-      try {
-        const data = await downloadFromUrl(session, url, opts);
-        if (data) return { success: true, source: url, data };
-      } catch (error) {
-        session.log.debug((error as Error).message);
-      }
+  if (doi.validate(urlOrId)) {
+    let url: string | undefined;
+    try {
+      url = await customResolveJatsUrlFromDoi(session, urlOrId, opts);
+    } catch (error) {
+      session.log.debug((error as Error).message);
     }
-    return { success: false, source: expectedUrls[0] };
+    if (url) {
+      result = await downloadFromUrl(session, url, opts);
+      if (result.success && result.data) return result;
+    }
+    url = await getJatsUrlFromDoi(session, urlOrId, opts);
+    if (url) {
+      result = await downloadFromUrl(session, url, opts);
+      if (result.success && result.data) return result;
+    }
   }
-  session.log.debug(`Could not find ${urlOrDoi} locally or resolve it to a valid JATS url`);
-  return { success: false, source: urlOrDoi };
+  if (urlOrId.startsWith('PMC')) {
+    result = await getPubMedJatsFromS3(session, urlOrId);
+    if (result.success && result.data) return result;
+  }
+  if (urlOrId.startsWith('PMC') || doi.validate(urlOrId)) {
+    const url = await constructJatsUrlFromPubMedCentral(session, urlOrId, opts);
+    if (url) {
+      result = await downloadFromUrl(session, url, opts);
+    }
+    return result;
+  }
+  if (isUrl(urlOrId)) {
+    result = await downloadFromUrl(session, urlOrId, opts);
+    return result;
+  }
+  session.log.debug(`Could not find ${urlOrId} locally or resolve it to a valid JATS url`);
+  return result;
 }
 
 /**
@@ -178,6 +197,7 @@ export async function jatsFetch(
   }
   let output = opts.output;
   let filename: string | undefined;
+  let altInput: string | undefined;
   if (input.endsWith('.tar.gz')) {
     // If input looks like a data repository URL, assume we want the data.
     opts.data = true;
@@ -192,6 +212,7 @@ export async function jatsFetch(
     const pmcid = await convertPMID2PMCID(session, input);
     if (pmcid) {
       session.log.debug(`Resolved input ${input} to PMC ID: ${pmcid}`);
+      // We cannot do anything with original PMID input at this point, so override it
       input = pmcid;
     }
   }
@@ -199,7 +220,8 @@ export async function jatsFetch(
     const pmcid = await convertDOI2PMCID(session, input);
     if (pmcid) {
       session.log.debug(`Resolved input ${input} to PMC ID: ${pmcid}`);
-      input = pmcid;
+      // We still may be able to use original DOI input, so keep both DOI and PMC
+      altInput = pmcid;
     }
   }
   if (!output) output = opts.data ? `${input}` : '.';
@@ -215,12 +237,11 @@ export async function jatsFetch(
     // This downloads all data and renames JATS - it will throw if it does not work
     result = await getPubMedJatsFromData(session, input, path.dirname(output), opts.listing);
   }
-  // We can do better with doi/pubmed -> PMC conversions to use this path more
-  if (!result?.data && input.startsWith('PMC')) {
-    result = await getPubMedJatsFromS3(session, input);
-  }
   if (!result?.data) {
     result = await downloadJatsFromUrl(session, input);
+  }
+  if (!result?.data && altInput) {
+    result = await downloadJatsFromUrl(session, altInput);
   }
   if (!result?.data && input.startsWith('PMC')) {
     // Downloading all the data for just the XML should be last resort
