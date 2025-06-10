@@ -1,5 +1,13 @@
 # jats-xml
 
+## 1.0.17
+
+### Patch Changes
+
+- 1cafc2a: Bump doi-utils version
+  - jats-tags@1.0.17
+  - jats-utils@1.0.17
+
 ## 1.0.16
 
 ### Patch Changes
