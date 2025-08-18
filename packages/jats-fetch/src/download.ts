@@ -4,13 +4,13 @@ import { doi } from 'doi-utils';
 import type { ISession } from 'myst-cli-utils';
 import { isUrl, tic } from 'myst-cli-utils';
 import {
-  constructJatsUrlFromPubMedCentral,
   convertDOI2PMCID,
   convertPMID2PMCID,
   getListingsFile,
-  getPubMedJatsFromData,
+  getPubMedJatsAndData,
   getPubMedJatsFromS3,
-} from './pubmed.js';
+  pubMedCentralEfetchUrl,
+} from './pubmed/index.js';
 import { customResolveJatsUrlFromDoi } from './resolvers.js';
 import type { DownloadResult, ResolutionOptions } from './types.js';
 import { defaultFetcher } from './utils.js';
@@ -129,13 +129,13 @@ export async function downloadJatsFromUrl(
   opts: ResolutionOptions = {},
 ): Promise<DownloadResult> {
   let result: DownloadResult = { success: false, source: urlOrId };
+  let url: string | undefined;
   if (fs.existsSync(urlOrId)) {
     session.log.debug(`JATS returned from local file ${urlOrId}`);
     const data = fs.readFileSync(urlOrId).toString();
     return { success: true, source: urlOrId, data };
   }
   if (doi.validate(urlOrId)) {
-    let url: string | undefined;
     try {
       url = await customResolveJatsUrlFromDoi(session, urlOrId, opts);
     } catch (error) {
@@ -150,17 +150,16 @@ export async function downloadJatsFromUrl(
       result = await downloadFromUrl(session, url, opts);
       if (result.success && result.data) return result;
     }
+    const doiAsPMCID = await convertDOI2PMCID(session, urlOrId);
+    if (doiAsPMCID) urlOrId = doiAsPMCID;
   }
   if (urlOrId.startsWith('PMC')) {
     result = await getPubMedJatsFromS3(session, urlOrId);
     if (result.success && result.data) return result;
-  }
-  if (urlOrId.startsWith('PMC') || doi.validate(urlOrId)) {
-    const url = await constructJatsUrlFromPubMedCentral(session, urlOrId, opts);
+    url = pubMedCentralEfetchUrl(urlOrId);
     if (url) {
       result = await downloadFromUrl(session, url, opts);
     }
-    return result;
   }
   if (isUrl(urlOrId)) {
     result = await downloadFromUrl(session, urlOrId, opts);
@@ -176,9 +175,11 @@ export async function downloadJatsFromUrl(
  * Allowed inputs are DOI, PMCID, PubMed ID (which will be resolved to PMCID), or a direct JATS download URL
  *
  * `output` may be a destination folder or xml filename. If `data` is `true`, this function will also
- * attempt to fetch dependent data; currently, this flag is only supported for open-access PMC articles.
- * Data location will be determined using the pubmed OA API. You may also specify a `listing` file to look up
- * data location.
+ * attempt to fetch dependent data; however, if it cannot, it will still download the JATS XML.
+ * Currently, this flag is only supported for open-access PMC articles and bioRxiv articles.
+ * Data location will be determined using the pubmed OA API and the Curvenote bioRxiv lookup API respectively.
+ *
+ * You may also specify a `listing` file to look up data location.
  */
 export async function jatsFetch(
   session: ISession,
@@ -197,7 +198,6 @@ export async function jatsFetch(
   }
   let output = opts.output;
   let filename: string | undefined;
-  let altInputPMC: string | undefined;
   if (input.endsWith('.tar.gz')) {
     // If input looks like a data repository URL, assume we want the data.
     opts.data = true;
@@ -216,14 +216,6 @@ export async function jatsFetch(
       input = pmcid;
     }
   }
-  if (doi.validate(input)) {
-    const pmcid = await convertDOI2PMCID(session, input);
-    if (pmcid) {
-      session.log.debug(`Resolved input ${input} to PMC ID: ${pmcid}`);
-      // We still may be able to use original DOI input, so keep both DOI and PMC
-      altInputPMC = pmcid;
-    }
-  }
   if (!output) output = opts.data ? `${input}` : '.';
   if (!path.extname(output)) {
     filename = filename ?? (input.startsWith('PMC') ? `${input}.xml` : 'jats.xml');
@@ -234,28 +226,10 @@ export async function jatsFetch(
   }
   let result: DownloadResult | undefined;
   if (opts.data) {
-    // This downloads all data and renames JATS - it will throw if it does not work
-    result = await getPubMedJatsFromData(
-      session,
-      altInputPMC ?? input,
-      path.dirname(output),
-      opts.listing,
-    );
+    result = await getPubMedJatsAndData(session, input, path.dirname(output), opts.listing);
   }
   if (!result?.data) {
     result = await downloadJatsFromUrl(session, input);
-  }
-  if (!result?.data && altInputPMC) {
-    result = await downloadJatsFromUrl(session, altInputPMC);
-  }
-  if (!result?.data && (input.startsWith('PMC') || altInputPMC)) {
-    // Downloading all the data for just the XML should be last resort
-    result = await getPubMedJatsFromData(
-      session,
-      altInputPMC ?? input,
-      path.dirname(output),
-      opts.listing,
-    );
   }
   if (!result?.data) {
     throw new Error(`Unable to resolve JATS XML content from ${input}`);
