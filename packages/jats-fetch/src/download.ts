@@ -185,7 +185,7 @@ export async function jatsFetch(
   input: string,
   opts: { output?: string; data?: boolean; listing?: string },
 ) {
-  if (input === 'listing' && !opts.data && !(opts.output && opts.listing)) {
+  if (input === 'listing' && !(opts.output && opts.listing)) {
     // Handle downloading only the listings file
     const inputDest = opts.output ?? opts.listing;
     if (!inputDest) {
@@ -197,7 +197,7 @@ export async function jatsFetch(
   }
   let output = opts.output;
   let filename: string | undefined;
-  let altInput: string | undefined;
+  let altInputPMC: string | undefined;
   if (input.endsWith('.tar.gz')) {
     // If input looks like a data repository URL, assume we want the data.
     opts.data = true;
@@ -221,7 +221,7 @@ export async function jatsFetch(
     if (pmcid) {
       session.log.debug(`Resolved input ${input} to PMC ID: ${pmcid}`);
       // We still may be able to use original DOI input, so keep both DOI and PMC
-      altInput = pmcid;
+      altInputPMC = pmcid;
     }
   }
   if (!output) output = opts.data ? `${input}` : '.';
@@ -235,17 +235,27 @@ export async function jatsFetch(
   let result: DownloadResult | undefined;
   if (opts.data) {
     // This downloads all data and renames JATS - it will throw if it does not work
-    result = await getPubMedJatsFromData(session, input, path.dirname(output), opts.listing);
+    result = await getPubMedJatsFromData(
+      session,
+      altInputPMC ?? input,
+      path.dirname(output),
+      opts.listing,
+    );
   }
   if (!result?.data) {
     result = await downloadJatsFromUrl(session, input);
   }
-  if (!result?.data && altInput) {
-    result = await downloadJatsFromUrl(session, altInput);
+  if (!result?.data && altInputPMC) {
+    result = await downloadJatsFromUrl(session, altInputPMC);
   }
-  if (!result?.data && input.startsWith('PMC')) {
+  if (!result?.data && (input.startsWith('PMC') || altInputPMC)) {
     // Downloading all the data for just the XML should be last resort
-    result = await getPubMedJatsFromData(session, input, path.dirname(output), opts.listing);
+    result = await getPubMedJatsFromData(
+      session,
+      altInputPMC ?? input,
+      path.dirname(output),
+      opts.listing,
+    );
   }
   if (!result?.data) {
     throw new Error(`Unable to resolve JATS XML content from ${input}`);

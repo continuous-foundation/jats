@@ -35,8 +35,6 @@ export type OpenAlexWork = {
 export type S3Config = {
   region: string;
   bucketName: string;
-  paths: string[];
-  typeMap: Record<string, string>;
 };
 
 export type PMCListingEntry = {

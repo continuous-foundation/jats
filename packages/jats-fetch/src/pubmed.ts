@@ -15,7 +15,7 @@ import type {
   ResolutionOptions,
   S3Config,
 } from './types.js';
-import { defaultFetcher, downloadFileFromS3, findFile, streamToFile } from './utils.js';
+import { checkFileExists, defaultFetcher, downloadFileFromS3, streamToFile } from './utils.js';
 
 const EFETCH_URL = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi';
 const ESUMMARY_URL = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi';
@@ -26,7 +26,12 @@ const LISTING_URL = `${LISTING_BASE_URL}oa_file_list.csv`;
 
 const LISTING_FILENAME = 'oa_file_list.csv';
 
-const OA_CONFIG: S3Config = {
+type PubMedS3Config = S3Config & {
+  paths: string[];
+  typeMap: Record<string, string>;
+};
+
+const OA_CONFIG: PubMedS3Config = {
   region: 'us-east-1',
   bucketName: 'pmc-oa-opendata',
   paths: ['oa_comm/xml/all/', 'oa_noncomm/xml/all/', 'author_manuscript/xml/all/'],
@@ -272,6 +277,21 @@ export async function constructJatsUrlFromPubMedCentral(
   }
   session.log.debug(toc(`OpenAlex resolved in %s, with a PMCID of ${PMCID}`));
   return pubMedCentralJats(PMCID);
+}
+
+/**
+ * Find if file exists on one of the PubMed S3 paths
+ */
+export async function findFile(client: S3Client, id: string, config: PubMedS3Config) {
+  for (const configPath of config.paths) {
+    const result = await checkFileExists(client, id, configPath, config);
+    if (result) {
+      return {
+        path: result,
+        type: config.typeMap[configPath],
+      };
+    }
+  }
 }
 
 /**
