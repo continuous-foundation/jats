@@ -17,12 +17,19 @@ export async function getBioRxivS3Metadata(
   if (!resp.ok) {
     throw new Error(`Bad response from ${BIORXIV_LOOKUP_URL}`);
   }
-  const bioRxivMeta = (await resp.json()) as { versions: { s3Bucket: string; s3Key: string }[] };
-  if (!bioRxivMeta.versions?.length) {
-    throw new Error(`Bad response from ${BIORXIV_LOOKUP_URL} - no versions found for ${input}`);
+  const bioRxivMeta = (await resp.json()) as {
+    versions?: { s3Bucket: string; s3Key: string }[];
+    s3Bucket?: string;
+    s3Key?: string;
+  };
+  if (bioRxivMeta.s3Bucket && bioRxivMeta.s3Key) {
+    return { bucketName: bioRxivMeta.s3Bucket, filePath: bioRxivMeta.s3Key };
   }
-  const { s3Bucket, s3Key } = bioRxivMeta.versions[bioRxivMeta.versions.length - 1];
-  return { bucketName: s3Bucket, filePath: s3Key };
+  if (bioRxivMeta.versions?.length) {
+    const { s3Bucket, s3Key } = bioRxivMeta.versions[bioRxivMeta.versions.length - 1];
+    return { bucketName: s3Bucket, filePath: s3Key };
+  }
+  throw new Error(`Bad response from ${BIORXIV_LOOKUP_URL} - no s3 bucket info found for ${input}`);
 }
 
 export async function downloadAndUnzipBioRxiv(
