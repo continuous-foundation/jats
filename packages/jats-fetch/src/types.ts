@@ -35,4 +35,5 @@ export type OpenAlexWork = {
 export type S3Config = {
   region: string;
   bucketName: string;
+  requestPayer?: 'requester';
 };

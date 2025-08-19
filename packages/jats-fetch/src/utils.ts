@@ -69,3 +69,27 @@ export async function streamToFile(url: string, dest: string, fetcher?: Fetcher)
   await promisify(pipeline)(resp.body, fs.createWriteStream(dest));
   return { success: true, dest, status: resp.status, statusText: resp.statusText };
 }
+
+export async function streamToFileFromS3(
+  client: S3Client,
+  filePath: string,
+  dest: string,
+  config: S3Config,
+) {
+  const command = new GetObjectCommand({
+    Bucket: config.bucketName,
+    Key: filePath,
+    ...(config.requestPayer && { RequestPayer: config.requestPayer }),
+  });
+  try {
+    const response = await client.send(command);
+    if (!response.Body) {
+      return { success: false, source: filePath };
+    }
+    await promisify(pipeline)(response.Body as any, fs.createWriteStream(dest));
+    return { success: true, source: filePath, dest };
+  } catch (err: any) {
+    console.error(err);
+    return { success: false, source: filePath };
+  }
+}

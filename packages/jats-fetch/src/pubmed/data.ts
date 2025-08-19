@@ -22,7 +22,6 @@ type OAResponse = {
 
 export async function getDownloadMetadata(pmcid: string, fetcher?: Fetcher) {
   const resp = await (fetcher ?? defaultFetcher)(`${OA_URL}?format=tgz&id=${pmcid}`, 'xml');
-  console.log(resp);
   if (!resp.ok) {
     throw new Error(`Bad response from ${OA_URL}`);
   }

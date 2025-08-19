@@ -14,6 +14,7 @@ import {
 import { customResolveJatsUrlFromDoi } from './resolvers.js';
 import type { DownloadResult, ResolutionOptions } from './types.js';
 import { defaultFetcher } from './utils.js';
+import { getBioRxivJatsAndData } from './biorxiv/jats.js';
 
 /**
  * Return data from URL using xml content type
@@ -226,7 +227,10 @@ export async function jatsFetch(
   }
   let result: DownloadResult | undefined;
   if (opts.data) {
-    result = await getPubMedJatsAndData(session, input, path.dirname(output), opts.listing);
+    result = await getBioRxivJatsAndData(session, input, path.dirname(output));
+    if (!result?.data) {
+      result = await getPubMedJatsAndData(session, input, path.dirname(output), opts.listing);
+    }
   }
   if (!result?.data) {
     result = await downloadJatsFromUrl(session, input);
