@@ -1,4 +1,4 @@
-# jats-xml
+# JATS
 
 [![jats-xml on npm](https://img.shields.io/npm/v/jats-xml.svg)](https://www.npmjs.com/package/jats-xml)
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/continuous-foundation/jats/blob/main/LICENSE)

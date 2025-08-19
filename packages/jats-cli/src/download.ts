@@ -8,7 +8,12 @@ function makeDownloadCLI(program: Command) {
     .description('Download JATS from URL or identifier')
     .argument('<input>', 'URL or other article identifier')
     .addOption(new Option('-o, --output <output>', 'Output filename or folder'))
-    .addOption(new Option('--data', 'Attempt to fetch all data associated with JATS XML'))
+    .addOption(
+      new Option(
+        '--no-data',
+        'Only attempt to fetch JATS XML, not full data associated with article.',
+      ),
+    )
     .addOption(
       new Option(
         '--listing <listing>',
