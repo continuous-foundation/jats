@@ -7,11 +7,11 @@ function makeConvertCLI(program: Command) {
     .description('Convert JATS file to MyST mdast json')
     .argument('[input]', 'The JATS file')
     .addOption(
-      new Option(
-        '--frontmatter <frontmatter>',
-        'Treat JATS frontmatter fields as page or project, or ignore if not specified',
-      ).choices(['page', 'project']),
+      new Option('--frontmatter <frontmatter>', 'Treat JATS frontmatter fields as page or project')
+        .choices(['page', 'project'])
+        .default('project'),
     )
+    .addOption(new Option('--no-frontmatter', 'Ignore JATS frontmatter'))
     .addOption(
       new Option(
         '--no-doi, --no-dois',
