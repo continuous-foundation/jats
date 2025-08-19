@@ -738,7 +738,7 @@ export function jatsConvertTransform(
 export async function jatsConvert(
   session: ISession,
   input?: string,
-  opts?: { frontmatter?: 'page' | 'project'; dois?: boolean; bibtex?: boolean },
+  opts?: { frontmatter?: 'page' | 'project' | false; dois?: boolean; bibtex?: boolean },
 ) {
   const logInfo: Record<string, any> = { jatsVersion: version };
   if (!input) {
