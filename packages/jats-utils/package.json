@@ -35,14 +35,13 @@
     "url": "https://github.com/continuous-foundation/jats/issues"
   },
   "dependencies": {
-    "unist-util-select": "^4.0.0"
+    "unist-util-select": "^4.0.0",
+    "jats-tags": "^1.0.18"
   },
   "peerDependencies": {
-    "xml-js": "^1",
-    "jats-tags": "^1.0.18"
+    "xml-js": "^1"
   },
   "devDependencies": {
-    "myst-common": "^1.0.0",
-    "jats-tags": "^1.0.18"
+    "myst-common": "^1.0.0"
   }
 }
