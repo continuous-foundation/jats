@@ -1,6 +1,6 @@
 {
   "name": "jats-tags",
-  "version": "1.0.18",
+  "version": "1.1.0",
   "description": "Tags and types for working with JATS in Typescript",
   "author": "Rowan Cockett <rowan@continuous.foundation>",
   "homepage": "https://github.com/continuous-foundation/jats",

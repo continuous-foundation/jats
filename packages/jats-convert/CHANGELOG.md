@@ -1,5 +1,19 @@
 # jats-convert
 
+## 1.1.0
+
+### Minor Changes
+
+- 3f08834: Update jats convert frontmatter default
+
+### Patch Changes
+
+- Updated dependencies [3f08834]
+- Updated dependencies [402296f]
+  - jats-fetch@1.1.0
+  - jats-xml@1.1.0
+  - jats-tags@1.1.0
+
 ## 1.0.18
 
 ### Patch Changes

@@ -1,5 +1,15 @@
 # jats-fetch
 
+## 1.1.0
+
+### Minor Changes
+
+- 402296f: Add data fetch from bioRxiv s3
+
+### Patch Changes
+
+- 3f08834: Enable v# suffixed bioRxiv dois
+
 ## 1.0.18
 
 ### Patch Changes
