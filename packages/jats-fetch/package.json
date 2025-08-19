@@ -1,6 +1,6 @@
 {
   "name": "jats-fetch",
-  "version": "1.0.18",
+  "version": "1.1.0",
   "description": "Types and utilities for downloading JATS",
   "author": "Rowan Cockett <rowan@continuous.foundation>",
   "homepage": "https://github.com/continuous-foundation/jats",
