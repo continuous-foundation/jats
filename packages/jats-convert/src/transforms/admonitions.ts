@@ -12,21 +12,28 @@ import type { VFile } from 'vfile';
  * If boxed-text caption does not have a title, warn.
  *
  * After converting, delete any remaining boxed-text captions.
+ *
+ * If there are no caption nodes but there is a title node, use that as the admonition title.
  */
 export function admonitionTransform(tree: GenericParent, file: VFile) {
-  const captions = selectAll(`${Tags.boxedText} > ${Tags.caption}`, tree) as GenericParent[];
-  captions.forEach((caption) => {
-    const title = select(Tags.title, caption) as GenericParent;
+  const boxedTexts = selectAll(Tags.boxedText, tree) as GenericParent[];
+  boxedTexts.forEach((boxedText) => {
+    const caption = select(`${Tags.caption}`, boxedText) as GenericParent;
+    const title = caption
+      ? (select(Tags.title, caption) as GenericParent)
+      : (select(Tags.title, boxedText) as GenericParent);
     if (!title) {
       fileWarn(file, 'Encountered boxed-text without title', {
-        node: caption,
+        node: boxedText,
         ruleId: RuleId.jatsParses,
       });
-      return;
+    } else {
+      const nodeToReplace = caption ?? title;
+      nodeToReplace.type = 'admonitionTitle';
+      nodeToReplace.children = title.children;
     }
-    caption.type = 'admonitionTitle';
-    caption.children = title.children;
   });
+  // Delete any remaining boxed-text caption nodes
   const noCaptions = selectAll(`${Tags.boxedText} > ${Tags.caption}`, tree) as GenericParent[];
   noCaptions.forEach((caption) => {
     caption.type = '__delete__';
