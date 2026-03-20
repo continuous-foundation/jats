@@ -1,0 +1,19 @@
+cases:
+  - source: Current_Content/December_2019/9696df64-6c18-1014-955a-f93441f10db3
+    title: boxed-text title becomes admonitionTitle
+    jats: |-
+      <boxed-text id="box1">
+        <sec>
+          <label>Box 1.</label>
+          <title>Brief explainer</title>
+          <p>Some text</p>
+        </sec>
+      </boxed-text>
+    mdast:
+      type: admonition
+      kind: note
+      children:
+        - type: admonitionTitle
+          children:
+            - type: text
+              value: Brief explainer
