@@ -159,6 +159,7 @@ const handlers: Record<string, Handler> = {
         identifier,
       });
     } else {
+      // TODO: For cases where we have `<inline-formula><inline-graphic>...`, we need to keep a math wrapper somehow.
       state.renderChildren(node);
     }
   },
@@ -265,6 +266,10 @@ const handlers: Record<string, Handler> = {
     state.closeNode();
   },
   graphic(node, state) {
+    const link = node?.['xlink:href'];
+    state.addLeaf('image', { url: link });
+  },
+  ['inline-graphic'](node, state) {
     const link = node?.['xlink:href'];
     state.addLeaf('image', { url: link });
   },
