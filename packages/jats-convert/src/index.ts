@@ -138,10 +138,10 @@ const handlers: Record<string, Handler> = {
   // },
   // code(node, state) {
   //   const { lang } = node as Code;
-  //   state.renderInline(node, 'code', { language: lang });
+  //   state.renderInline(node, 'code', { lang });
   // },
   preformat(node, state) {
-    state.addLeaf('code', { value: toTextPreserveWhitespace(node), language: 'text' });
+    state.addLeaf('code', { value: toTextPreserveWhitespace(node), lang: 'text' });
   },
   list(node, state) {
     // https://jats.nlm.nih.gov/archiving/tag-library/1.3/element/list.html
