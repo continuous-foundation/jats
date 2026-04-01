@@ -72,3 +72,9 @@ cases:
   - title: Single character is not abbreviation
     text: See figure (f) please
     abbreviations: {}
+  - title: Zenodo DOI in parens is not an abbreviation
+    text: status at publication at Zenodo (10.5281/zenodo.3558682).
+    abbreviations: {}
+  - title: URL in parens is not an abbreviation
+    text: See httpspath (https://example.org/path).
+    abbreviations: {}
