@@ -54,6 +54,21 @@ type WriteOptions = SerializationOptions & {
   bodyOnly?: boolean;
 };
 
+/**
+ * Drop comments and whitespace-only text nodes introduced by xml-js when
+ * `captureSpacesBetweenElements` is true (ignorable XML whitespace).
+ */
+function significantChildElements(elements: Element[] | undefined): Element[] | undefined {
+  return elements?.filter((elem) => {
+    if (elem.type === 'comment') return false;
+    if (elem.type === 'text') {
+      const t = String((elem as { text?: string }).text ?? '');
+      if (!t.trim()) return false;
+    }
+    return true;
+  });
+}
+
 export class Jats {
   declaration?: DeclarationAttributes;
   doctype?: string;
@@ -67,13 +82,18 @@ export class Jats {
     this.log = opts?.log;
     if (opts?.source) this.source = opts.source;
     try {
-      this.raw = xml2js(data, { compact: false }) as Element;
+      this.raw = xml2js(data, {
+        compact: false,
+        // Preserve whitespace-only text nodes between elements. This is usually unnecessary except inside <preformat>.
+        // convertToUnist drops these outside preformat so other content is processed independent of arbitrary xml whitespace.
+        captureSpacesBetweenElements: true,
+      }) as Element;
     } catch (error) {
       throw new Error('Problem parsing the JATS document, please ensure it is XML');
     }
     const { declaration, elements } = this.raw;
     this.declaration = declaration?.attributes;
-    const filteredElements = elements?.filter((elem) => elem.type !== 'comment');
+    const filteredElements = significantChildElements(elements);
     if (filteredElements?.length && filteredElements[0].type !== 'doctype') {
       this.log?.warn('JATS is missing DOCTYPE declaration');
       filteredElements.unshift({ type: 'doctype' });
@@ -324,12 +344,9 @@ function hasSingleArticle(element: Element): boolean {
   if (element.name === 'article') {
     return true;
   }
-  if (
-    element.name === 'pmc-articleset' &&
-    element.elements?.length === 1 &&
-    element.elements[0].name === 'article'
-  ) {
-    return true;
+  if (element.name === 'pmc-articleset') {
+    const children = significantChildElements(element.elements);
+    return children?.length === 1 && children[0].name === 'article';
   }
   return false;
 }

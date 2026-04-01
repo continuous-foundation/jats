@@ -9,6 +9,23 @@ import type { VFile } from 'vfile';
 export function toText(node: Node | undefined) {
   return mystToText(node as any);
 }
+
+/**
+ * Extract raw text while preserving whitespace/newlines, ignoring markup nodes.
+ *
+ * This is useful for JATS nodes like `<preformat>` that may contain inline tags
+ * (`<bold>`, `<italic>`, etc.) but should serialize as preformatted text.
+ */
+export function toTextPreserveWhitespace(node: any): string {
+  if (!node) return '';
+  if (typeof node === 'string') return node;
+  if (typeof node.value === 'string') return node.value;
+  if (typeof node.cdata === 'string') return node.cdata;
+  const children: any[] | undefined = node.children;
+  if (!children || children.length === 0) return '';
+  return children.map((child) => toTextPreserveWhitespace(child)).join('');
+}
+
 /**
  * copyNode function that handles newer version of unist
  */

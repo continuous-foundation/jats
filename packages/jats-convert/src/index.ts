@@ -25,7 +25,7 @@ import {
 } from './transforms/references.js';
 import { backToBodyTransform, tableFootnotesToLegend } from './transforms/footnotes.js';
 import version from './version.js';
-import { logMessagesFromVFile, toText } from './utils.js';
+import { logMessagesFromVFile, toText, toTextPreserveWhitespace } from './utils.js';
 import { inlineCitationsTransform } from './myst/inlineCitations.js';
 import {
   abbreviationFootnoteTransform,
@@ -140,6 +140,9 @@ const handlers: Record<string, Handler> = {
   //   const { lang } = node as Code;
   //   state.renderInline(node, 'code', { language: lang });
   // },
+  preformat(node, state) {
+    state.addLeaf('code', { value: toTextPreserveWhitespace(node) });
+  },
   list(node, state) {
     // https://jats.nlm.nih.gov/archiving/tag-library/1.3/element/list.html
     state.renderInline(node, 'list', {

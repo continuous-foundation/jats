@@ -1,0 +1,73 @@
+cases:
+  - source: Current_Content/December_2019/9696df64-6c18-1014-955a-f93441f10db3
+    title: preformat preserves newlines between inline-tagged R library lines
+    jats: |-
+      <preformat><italic># library(gtools)</italic>
+      <italic># library(rstan)</italic>
+      <italic># library(rjags)</italic>
+      <italic># library(shinystan)</italic>
+      <italic># library(VGAM)</italic>
+
+      notus &lt;- 50
+      nsamples &lt;- 5000
+      nreps &lt;- 100
+      intensity &lt;- 1
+      comprop &lt;- matrix(0, ncol = notus, nrow = 2)
+      indprop &lt;- matrix(0, ncol = notus, nrow = nreps)
+      #Assemblage 1
+      comprop[1, ] &lt;- rdirichlet(1, c(rep(15, 5), rep(1, notus - 5)))
+      #Assemblage 2
+      comprop[2, ] &lt;- rdirichlet(1, c(rep(1, notus - 5), rep(15, 5)))
+      #Construct data matrix
+      com &lt;- matrix(0, ncol = notus, nrow = nreps)
+      for (i in 1:(nreps / 2)) {
+        indprop[i, ] &lt;- rdirichlet(1, comprop[1, ] * intensity)
+        com[i, ] &lt;- rmultinom(1, nsamples, prob = indprop[i, ])
+      }
+      for (i in (1 + nreps / 2): nreps) {
+        indprop[i, ] &lt;- rdirichlet(1, comprop[2, ] * intensity)
+        com[i, ] &lt;- rmultinom(1, nsamples, prob = indprop[i, ])
+      }
+      com &lt;- com + 1
+      nsamples &lt;- nsamples + 50</preformat>
+    mdast:
+      type: code
+      value: |-
+        # library(gtools)
+        # library(rstan)
+        # library(rjags)
+        # library(shinystan)
+        # library(VGAM)
+
+        notus <- 50
+        nsamples <- 5000
+        nreps <- 100
+        intensity <- 1
+        comprop <- matrix(0, ncol = notus, nrow = 2)
+        indprop <- matrix(0, ncol = notus, nrow = nreps)
+        #Assemblage 1
+        comprop[1, ] <- rdirichlet(1, c(rep(15, 5), rep(1, notus - 5)))
+        #Assemblage 2
+        comprop[2, ] <- rdirichlet(1, c(rep(1, notus - 5), rep(15, 5)))
+        #Construct data matrix
+        com <- matrix(0, ncol = notus, nrow = nreps)
+        for (i in 1:(nreps / 2)) {
+          indprop[i, ] <- rdirichlet(1, comprop[1, ] * intensity)
+          com[i, ] <- rmultinom(1, nsamples, prob = indprop[i, ])
+        }
+        for (i in (1 + nreps / 2): nreps) {
+          indprop[i, ] <- rdirichlet(1, comprop[2, ] * intensity)
+          com[i, ] <- rmultinom(1, nsamples, prob = indprop[i, ])
+        }
+        com <- com + 1
+        nsamples <- nsamples + 50
+
+  - title: preformat newline between plain text runs (no CDATA)
+    jats: |-
+      <preformat>line one
+      line two</preformat>
+    mdast:
+      type: code
+      value: |-
+        line one
+        line two
