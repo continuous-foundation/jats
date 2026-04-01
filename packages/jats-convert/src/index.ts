@@ -141,7 +141,7 @@ const handlers: Record<string, Handler> = {
   //   state.renderInline(node, 'code', { language: lang });
   // },
   preformat(node, state) {
-    state.addLeaf('code', { value: toTextPreserveWhitespace(node) });
+    state.addLeaf('code', { value: toTextPreserveWhitespace(node), language: 'text' });
   },
   list(node, state) {
     // https://jats.nlm.nih.gov/archiving/tag-library/1.3/element/list.html
