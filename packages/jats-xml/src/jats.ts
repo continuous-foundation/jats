@@ -295,12 +295,20 @@ export class Jats {
     return selectAll(Tags.subArticle, this.tree) as SubArticle[];
   }
 
+  /** First `ref-list` in back matter. */
   get refList(): RefList | undefined {
-    return select<RefList>(Tags.refList, this.back);
+    return this.refLists[0];
   }
 
+  /** All `ref-list` elements under `back`, in document order. */
+  get refLists(): RefList[] {
+    if (!this.back) return [];
+    return selectAll(Tags.refList, this.back) as RefList[];
+  }
+
+  /** Every `ref` from every `ref-list` under `back`, in document order. */
   get references(): Reference[] {
-    return selectAll(Tags.ref, this.refList) as Reference[];
+    return this.refLists.flatMap((list) => selectAll(Tags.ref, list) as Reference[]);
   }
 
   sort() {

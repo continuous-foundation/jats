@@ -1,8 +1,5 @@
-# JATS references → cite (partial mdast). Loaded by convert.spec.ts with all tests/*.yml.
-
 cases:
-  - source: references
-    title: pub-id-type doi returns doi
+  - title: pub-id-type doi returns doi
     jats: |-
       <article><body><xref rid="B5-molecules-13-00204" ref-type="bibr">1</xref></body><back>
       <ref-list>
@@ -30,8 +27,7 @@ cases:
       label: https://doi.org/10.1002/cbic.200500559
       identifier: https://doi.org/10.1002/cbic.200500559
 
-  - source: references
-    title: pub-id-type doi with ref-type="ref" returns doi
+  - title: pub-id-type doi with ref-type="ref" returns doi
     jats: |-
       <article><body><xref rid="B5-molecules-13-00204" ref-type="ref">1</xref></body><back>
       <ref-list>
@@ -59,8 +55,7 @@ cases:
       label: https://doi.org/10.1002/cbic.200500559
       identifier: https://doi.org/10.1002/cbic.200500559
 
-  - source: references
-    title: pub-id-type pmid returns doi
+  - title: pub-id-type pmid returns doi
     jats: |-
       <article><body><xref rid="B5-molecules-13-00204" ref-type="bibr">1</xref></body><back>
       <ref-list>
@@ -88,8 +83,39 @@ cases:
       label: https://doi.org/10.1002/cbic.200500559
       identifier: https://doi.org/10.1002/cbic.200500559
 
-  - source: references
-    title: citation node type is still processed
+  - source: Current_Content/December_2019/9696df64-6c18-1014-955a-f93441f10db3
+    title: multiple ref-list sections both contribute to citation lookup
+    jats: |-
+      <article><body>
+      <xref rid="c1" ref-type="bibr">1</xref>
+      <xref rid="sc1" ref-type="bibr">S1</xref>
+      </body><back>
+      <ref-list>
+      <title>References</title>
+      <ref id="c1"><mixed-citation publication-type="journal">
+      <string-name><surname>Main</surname></string-name>
+      <article-title>Alpha</article-title>
+      <year>2000</year>
+      <pub-id pub-id-type="doi">10.1000/main</pub-id>
+      </mixed-citation></ref>
+      </ref-list>
+      <ref-list>
+      <title>Supplemental References</title>
+      <ref id="sc1"><mixed-citation publication-type="journal">
+      <string-name><surname>Supp</surname></string-name>
+      <article-title>Beta</article-title>
+      <year>2010</year>
+      <pub-id pub-id-type="doi">10.1000/supp</pub-id>
+      </mixed-citation></ref>
+      </ref-list>
+      </back></article>
+    opts:
+      dois: true
+    mdast:
+      type: cite
+      identifier: https://doi.org/10.1000/supp
+
+  - title: citation node type is still processed
     jats: |-
       <article><body><xref rid="B5-molecules-13-00204" ref-type="bibr">1</xref></body><back>
       <ref-list>
