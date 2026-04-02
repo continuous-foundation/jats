@@ -2,7 +2,7 @@
   "name": "jats-convert",
   "version": "1.1.0",
   "description": "Read JATS and convert to MyST-spec frontmatter and AST",
-  "author": "Rowan Cockett <rowan@continuous.foundation>",
+  "author": "Rowan Cockett <rowan@continuousfoundation.org>",
   "homepage": "https://github.com/continuous-foundation/jats/tree/main/packages/jats-convert",
   "license": "MIT",
   "type": "module",

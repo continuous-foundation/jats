@@ -2,7 +2,7 @@
   "name": "meca",
   "version": "1.1.0",
   "description": "Types and utilities for working with MECA",
-  "author": "Rowan Cockett <rowan@continuous.foundation>",
+  "author": "Rowan Cockett <rowan@continuousfoundation.org>",
   "homepage": "https://github.com/continuous-foundation/jats",
   "license": "MIT",
   "sideEffects": false,
