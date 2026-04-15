@@ -44,7 +44,15 @@ import {
 type Options = { log?: Logger; source?: string };
 
 function select<T extends GenericNode>(selector: string, node?: GenericNode): T | undefined {
-  return (unistSelect(selector, node) ?? undefined) as T | undefined;
+  try {
+    return (unistSelect(selector, node) ?? undefined) as T | undefined;
+  } catch (error) {
+    const nodeType = node?.type ?? '(undefined)';
+    const msg = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      `[jats-xml/select] selector="${selector}" nodeType="${nodeType}" failed: ${msg}`,
+    );
+  }
 }
 
 const DEFAULT_DOCTYPE =
@@ -140,8 +148,8 @@ export class Jats {
     let licenseString: string | null = null;
     if (license?.['xlink:href']) {
       licenseString = license['xlink:href'];
-    } else if (select('[type=ali:license_ref]', license)) {
-      licenseString = toText(select('[type=ali:license_ref]', license));
+    } else if (license && select('[type=ali\\:license_ref]', license)) {
+      licenseString = toText(select('[type=ali\\:license_ref]', license));
     } else if (selectAll('ext-link', license).length === 1) {
       // this should only happen if there is only one ext-link
       licenseString = (select('ext-link', license) as LinkMixin)['xlink:href'] ?? null;
