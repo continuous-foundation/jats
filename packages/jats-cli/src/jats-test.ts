@@ -1,6 +1,6 @@
 import { Command, Option } from 'commander';
 import { clirun, tic } from 'myst-cli-utils';
-import yaml from 'js-yaml';
+import { load, dump } from 'js-yaml';
 import fs from 'fs';
 import { select, selectAll } from 'unist-util-select';
 import { is } from 'unist-util-is';
@@ -26,18 +26,18 @@ const INDENT = '       ';
 
 function printNodes(expected: GenericNode | GenericNode[], received: GenericNode | GenericNode[]) {
   return chalk.reset(
-    `\n${INDENT}${chalk.greenBright('Expected node containing')}:\n${INDENT}  ${yaml
-      .dump(expected)
-      .replace(/\n/g, `\n${INDENT}  `)}\n${INDENT}${chalk.redBright(
+    `\n${INDENT}${chalk.greenBright('Expected node containing')}:\n${INDENT}  ${dump(
+      expected,
+    ).replace(/\n/g, `\n${INDENT}  `)}\n${INDENT}${chalk.redBright(
       'Received node',
-    )}:\n${INDENT}  ${yaml.dump(received).replace(/\n/g, `\n${INDENT}  `)}`,
+    )}:\n${INDENT}  ${dump(received).replace(/\n/g, `\n${INDENT}  `)}`,
   );
 }
 
 export async function testJatsFile(session: ISession, file: string, opts: Options) {
   const toc = tic();
   const jats = await parseJats(session, file);
-  const tests = yaml.load(fs.readFileSync(opts.cases).toString()) as TestCases;
+  const tests = load(fs.readFileSync(opts.cases).toString()) as TestCases;
   const results: [string, boolean | null, string?][] = tests.cases.map((testCase, index) => {
     if (!testCase.title) {
       return [`Test Case ${index}`, null, 'Test must include a title'];

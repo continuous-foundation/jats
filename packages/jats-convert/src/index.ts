@@ -3,7 +3,7 @@ import path from 'node:path';
 import { unified } from 'unified';
 import type { Plugin } from 'unified';
 import { VFile } from 'vfile';
-import yaml from 'js-yaml';
+import { dump, load } from 'js-yaml';
 import type { MessageInfo, GenericNode, GenericParent } from 'myst-common';
 import { copyNode, fileError, RuleId, normalizeLabel } from 'myst-common';
 import { select, selectAll } from 'unist-util-select';
@@ -779,24 +779,24 @@ export async function jatsConvert(
   const logJson = path.join(dir, `${basename}.log.json`);
   const logYml = path.join(dir, `${basename}.log.yml`);
   fs.writeFileSync(logJson, JSON.stringify(logInfo, null, 2));
-  fs.writeFileSync(logYml, yaml.dump(logInfo));
+  fs.writeFileSync(logYml, dump(logInfo));
   if (opts?.frontmatter === 'page') {
     fs.writeFileSync(mystJson, JSON.stringify({ mdast: tree, frontmatter }, null, 2));
   } else if (opts?.frontmatter === 'project') {
     if (fs.existsSync(mystYml)) {
       // console.log('myst.yml exists; overriding with frontmatter from JATS');
-      const previous = yaml.load(fs.readFileSync(mystYml).toString()) as {
+      const previous = load(fs.readFileSync(mystYml).toString()) as {
         version: number;
         project: ProjectFrontmatter;
         site: Record<string, any>;
       };
       fs.writeFileSync(
         mystYml,
-        yaml.dump({ ...previous, project: { ...previous.project, ...frontmatter } }),
+        dump({ ...previous, project: { ...previous.project, ...frontmatter } }),
       );
     } else {
       // console.log(`writing new myst.yml file`);
-      fs.writeFileSync(mystYml, yaml.dump({ version: 1, project: frontmatter, site: {} }));
+      fs.writeFileSync(mystYml, dump({ version: 1, project: frontmatter, site: {} }));
     }
     fs.writeFileSync(
       mystJson,
