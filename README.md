@@ -45,6 +45,6 @@ As of v1.0.0 this package is [ESM only](https://gist.github.com/sindresorhus/a39
 <p style="text-align: center; color: #aaa; padding-top: 50px">
   Made with love by
   <a href="https://continuous.foundation" target="_blank" style="color: #aaa">
-    Continuous Science Foundation <img src="https://continuous.foundation/images/logo-small.svg" style="height: 1em" />
+    Continuous Science Foundation <img src="https://cdn.curvenote.com/static/site/csf/icon.svg" style="height: 1em" />
   </a>
 </p>
