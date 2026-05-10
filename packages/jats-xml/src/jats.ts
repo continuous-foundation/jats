@@ -126,12 +126,19 @@ export class Jats {
     const subtitle = this.articleSubtitle;
     const short_title = this.articleAltTitle;
     let date: string | undefined;
-    if (this.publicationDate) {
-      const pubDate = toDate(this.publicationDate);
-      if (pubDate) {
-        const year = pubDate.getFullYear();
-        const month = (pubDate.getMonth() + 1).toString().padStart(2, '0');
-        const day = pubDate.getDate().toString().padStart(2, '0');
+    // Prefer a fully-specified publication date (day/month/year).
+    // If publication date is incomplete (e.g. year-only), fall back to history accepted date.
+    const preferredDateNode =
+      this.publicationDate ??
+      this.pubHistoryPubDate ??
+      this.pubHistoryAcceptedDate ??
+      this.historyAcceptedDate;
+    if (preferredDateNode) {
+      const d = toDate(preferredDateNode);
+      if (d) {
+        const year = d.getUTCFullYear();
+        const month = (d.getUTCMonth() + 1).toString().padStart(2, '0');
+        const day = d.getUTCDate().toString().padStart(2, '0');
         date = `${year}-${month}-${day}`;
       }
     }
@@ -220,6 +227,49 @@ export class Jats {
 
   get publicationDate(): PubDate | undefined {
     return this.publicationDates.find((d) => !!select(Tags.day, d));
+  }
+
+  /**
+   * JATS `<history>` can include multiple `<date date-type="...">` nodes,
+   * often including an "accepted" date that is a better default for project/page `date`.
+   */
+  get historyDates(): GenericParent[] {
+    return selectAll('history date', this.articleMeta ?? this.front) as GenericParent[];
+  }
+
+  get historyAcceptedDate(): GenericParent | undefined {
+    const accepted = this.historyDates.find((d) => {
+      const dt = String((d as any)['date-type'] ?? '').toLowerCase();
+      return dt === 'accepted' || dt === 'accept';
+    });
+    if (accepted && select(Tags.day, accepted)) return accepted;
+    return undefined;
+  }
+
+  /**
+   * Some sources store important dates under:
+   * `<article-meta><pub-history><event><date date-type="...">...</date></event></pub-history>`.
+   */
+  get pubHistoryDates(): GenericParent[] {
+    return selectAll('pub-history event date', this.articleMeta ?? this.front) as GenericParent[];
+  }
+
+  private findPubHistoryDateByType(types: string[]): GenericParent | undefined {
+    const wanted = new Set(types.map((t) => t.toLowerCase()));
+    const found = this.pubHistoryDates.find((d) => {
+      const dt = String((d as any)['date-type'] ?? '').toLowerCase();
+      return wanted.has(dt);
+    });
+    if (found && select(Tags.day, found)) return found;
+    return undefined;
+  }
+
+  get pubHistoryPubDate(): GenericParent | undefined {
+    return this.findPubHistoryDateByType(['pub', 'published', 'publication']);
+  }
+
+  get pubHistoryAcceptedDate(): GenericParent | undefined {
+    return this.findPubHistoryDateByType(['accepted', 'accept']);
   }
 
   get license(): License | undefined {
