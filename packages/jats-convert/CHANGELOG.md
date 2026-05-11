@@ -1,5 +1,21 @@
 # jats-convert
 
+## 1.1.1
+
+### Patch Changes
+
+- 5c6c6c5: Support multiple ref-lists
+- 5c6c6c5: Support preformat elements with nested xml styling
+- 5c6c6c5: Don't pick up quotes as abbreviations
+- 5c6c6c5: Support non-caption boxed-text title
+- Updated dependencies [5c6c6c5]
+- Updated dependencies [5c6c6c5]
+- Updated dependencies [5c6c6c5]
+- Updated dependencies [5c6c6c5]
+  - jats-xml@1.1.1
+  - jats-tags@1.1.1
+  - jats-fetch@1.1.1
+
 ## 1.1.0
 
 ### Minor Changes

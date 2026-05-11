@@ -1,5 +1,17 @@
 # jats-xml
 
+## 1.1.1
+
+### Patch Changes
+
+- 5c6c6c5: Support multiple ref-lists
+- 5c6c6c5: Fix license selector
+- 5c6c6c5: Support more date elements
+- 5c6c6c5: Support preformat elements with nested xml styling
+- Updated dependencies [5c6c6c5]
+  - jats-utils@1.1.1
+  - jats-tags@1.1.1
+
 ## 1.1.0
 
 ### Patch Changes

@@ -1,5 +1,12 @@
 # jats-utils
 
+## 1.1.1
+
+### Patch Changes
+
+- 5c6c6c5: Support preformat elements with nested xml styling
+  - jats-tags@1.1.1
+
 ## 1.1.0
 
 ### Patch Changes
