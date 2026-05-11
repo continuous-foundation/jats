@@ -1,7 +1,6 @@
 cases:
   - title: pub-id-type doi returns doi
     jats: |-
-      <!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Archiving and Interchange DTD v1.0 20120330//EN" "JATS-archivearticle1.dtd">
       <article><body><xref rid="B5-molecules-13-00204" ref-type="bibr">1</xref></body><back>
       <ref-list>
       <ref id="B5-molecules-13-00204"><label>5.</label>
@@ -18,10 +17,18 @@ cases:
       </ref>
       </ref-list>
       </back></article>
-    doi: https://doi.org/10.1002/cbic.200500559
+    opts:
+      dois: true
+      pmidCache:
+        '16755624': '10.1002/cbic.200500559'
+    mdast:
+      type: cite
+      kind: parenthetical
+      label: https://doi.org/10.1002/cbic.200500559
+      identifier: https://doi.org/10.1002/cbic.200500559
+
   - title: pub-id-type doi with ref-type="ref" returns doi
     jats: |-
-      <!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Archiving and Interchange DTD v1.0 20120330//EN" "JATS-archivearticle1.dtd">
       <article><body><xref rid="B5-molecules-13-00204" ref-type="ref">1</xref></body><back>
       <ref-list>
       <ref id="B5-molecules-13-00204"><label>5.</label>
@@ -38,10 +45,18 @@ cases:
       </ref>
       </ref-list>
       </back></article>
-    doi: https://doi.org/10.1002/cbic.200500559
+    opts:
+      dois: true
+      pmidCache:
+        '16755624': '10.1002/cbic.200500559'
+    mdast:
+      type: cite
+      kind: parenthetical
+      label: https://doi.org/10.1002/cbic.200500559
+      identifier: https://doi.org/10.1002/cbic.200500559
+
   - title: pub-id-type pmid returns doi
     jats: |-
-      <!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Archiving and Interchange DTD v1.0 20120330//EN" "JATS-archivearticle1.dtd">
       <article><body><xref rid="B5-molecules-13-00204" ref-type="bibr">1</xref></body><back>
       <ref-list>
       <ref id="B5-molecules-13-00204"><label>5.</label>
@@ -58,10 +73,50 @@ cases:
       </ref>
       </ref-list>
       </back></article>
-    doi: https://doi.org/10.1002/cbic.200500559
+    opts:
+      dois: true
+      pmidCache:
+        '16755624': '10.1002/cbic.200500559'
+    mdast:
+      type: cite
+      kind: parenthetical
+      label: https://doi.org/10.1002/cbic.200500559
+      identifier: https://doi.org/10.1002/cbic.200500559
+
+  - source: Current_Content/December_2019/9696df64-6c18-1014-955a-f93441f10db3
+    title: multiple ref-list sections both contribute to citation lookup
+    jats: |-
+      <article><body>
+      <xref rid="c1" ref-type="bibr">1</xref>
+      <xref rid="sc1" ref-type="bibr">S1</xref>
+      </body><back>
+      <ref-list>
+      <title>References</title>
+      <ref id="c1"><mixed-citation publication-type="journal">
+      <string-name><surname>Main</surname></string-name>
+      <article-title>Alpha</article-title>
+      <year>2000</year>
+      <pub-id pub-id-type="doi">10.1000/main</pub-id>
+      </mixed-citation></ref>
+      </ref-list>
+      <ref-list>
+      <title>Supplemental References</title>
+      <ref id="sc1"><mixed-citation publication-type="journal">
+      <string-name><surname>Supp</surname></string-name>
+      <article-title>Beta</article-title>
+      <year>2010</year>
+      <pub-id pub-id-type="doi">10.1000/supp</pub-id>
+      </mixed-citation></ref>
+      </ref-list>
+      </back></article>
+    opts:
+      dois: true
+    mdast:
+      type: cite
+      identifier: https://doi.org/10.1000/supp
+
   - title: citation node type is still processed
     jats: |-
-      <!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Archiving and Interchange DTD v1.0 20120330//EN" "JATS-archivearticle1.dtd">
       <article><body><xref rid="B5-molecules-13-00204" ref-type="bibr">1</xref></body><back>
       <ref-list>
       <ref id="B5-molecules-13-00204"><label>5.</label>
@@ -78,4 +133,12 @@ cases:
       </ref>
       </ref-list>
       </back></article>
-    doi: https://doi.org/10.1002/cbic.200500559
+    opts:
+      dois: true
+      pmidCache:
+        '16755624': '10.1002/cbic.200500559'
+    mdast:
+      type: cite
+      kind: parenthetical
+      label: https://doi.org/10.1002/cbic.200500559
+      identifier: https://doi.org/10.1002/cbic.200500559

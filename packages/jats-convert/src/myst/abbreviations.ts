@@ -1,4 +1,6 @@
 import type { GenericParent } from 'myst-common';
+import { doi } from 'doi-utils';
+import { isUrl } from 'myst-cli-utils';
 import { selectAll } from 'unist-util-select';
 import { toText } from '../utils.js';
 import type { ProjectFrontmatter } from 'myst-frontmatter';
@@ -27,6 +29,14 @@ export function abbreviationsFromTree(
 
 function maybeStopWord(word: string) {
   return word.length < 5;
+}
+
+/** Parenthetical text used as a literal label in quotes is not an abbreviation, e.g. test set ("Test"). */
+function isQuotedParentheticalLabel(abbr: string) {
+  const t = abbr.trim();
+  if (!t) return false;
+  const mark = /\p{Quotation_Mark}/u;
+  return mark.test(t[0] ?? '') || mark.test(t[t.length - 1] ?? '');
 }
 
 type AbbrPossibility = { prev?: string; next: string[] };
@@ -60,7 +70,13 @@ export function abbreviationsFromText(text: string): Record<string, string> {
   const textList = text.split(' ');
   textList.forEach((word, index) => {
     const abbr = word.match(/^\(([^\s]{2,})\).{0,1}/)?.[1];
-    if (!abbr) return;
+    if (
+      !abbr ||
+      isQuotedParentheticalLabel(abbr) ||
+      doi.validate(abbr.trim()) ||
+      isUrl(abbr.trim())
+    )
+      return;
     const possibleWords: string[] = [];
     let wordIndex = index - 1;
     while (textList[wordIndex] && possibleWords.filter((w) => w.length > 4).length < abbr.length) {

@@ -109,4 +109,105 @@ describe('Basic JATS read', () => {
     const jats = new Jats(data);
     expect(jats.serialize()).toBe(data);
   });
+
+  test('frontmatter date prefers history accepted date', async () => {
+    const data = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Publishing DTD v1.2 20190208//EN" "JATS-journalpublishing1.dtd">
+<article>
+  <front>
+    <article-meta>
+      <title-group>
+        <article-title>Example</article-title>
+      </title-group>
+      <pub-date pub-type="epub">
+        <day>20</day><month>03</month><year>2024</year>
+      </pub-date>
+      <history>
+        <date date-type="accepted">
+          <day>02</day><month>01</month><year>2024</year>
+        </date>
+      </history>
+    </article-meta>
+  </front>
+  <body />
+</article>`;
+    const jats = new Jats(data);
+    expect(jats.frontmatter.date).toEqual('2024-03-20');
+  });
+
+  test('frontmatter date falls back to history accepted when pub-date is year-only', async () => {
+    const data = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Publishing DTD v1.2 20190208//EN" "JATS-journalpublishing1.dtd">
+<article>
+  <front>
+    <article-meta>
+      <title-group>
+        <article-title>Example</article-title>
+      </title-group>
+      <pub-date pub-type="epub"><year>2014</year></pub-date>
+      <history>
+        <date date-type="accepted">
+          <day>02</day><month>01</month><year>2014</year>
+        </date>
+      </history>
+    </article-meta>
+  </front>
+  <body />
+</article>`;
+    const jats = new Jats(data);
+    expect(jats.frontmatter.date).toEqual('2014-01-02');
+  });
+
+  test('frontmatter date prefers pub-history pub date over accepted', async () => {
+    const data = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Publishing DTD v1.2 20190208//EN" "JATS-journalpublishing1.dtd">
+<article>
+  <front>
+    <article-meta>
+      <title-group>
+        <article-title>Example</article-title>
+      </title-group>
+      <pub-date pub-type="epub"><year>2014</year></pub-date>
+      <pub-history>
+        <event>
+          <date date-type="accepted"><day>02</day><month>01</month><year>2014</year></date>
+          <date date-type="pub"><day>03</day><month>02</month><year>2014</year></date>
+        </event>
+      </pub-history>
+      <history>
+        <date date-type="accepted"><day>04</day><month>03</month><year>2014</year></date>
+      </history>
+    </article-meta>
+  </front>
+  <body />
+</article>`;
+    const jats = new Jats(data);
+    expect(jats.frontmatter.date).toEqual('2014-02-03');
+  });
+
+  test('frontmatter date uses pub-history accepted before history accepted', async () => {
+    const data = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Publishing DTD v1.2 20190208//EN" "JATS-journalpublishing1.dtd">
+<article>
+  <front>
+    <article-meta>
+      <title-group>
+        <article-title>Example</article-title>
+      </title-group>
+      <pub-date pub-type="epub"><year>2014</year></pub-date>
+      <pub-history>
+        <event>
+          <date date-type="accepted"><day>02</day><month>01</month><year>2014</year></date>
+        </event>
+      </pub-history>
+      <history>
+        <date date-type="accepted"><day>04</day><month>03</month><year>2014</year></date>
+      </history>
+    </article-meta>
+  </front>
+  <body />
+</article>`;
+    const jats = new Jats(data);
+    expect(jats.frontmatter.date).toEqual('2014-01-02');
+  });
 });

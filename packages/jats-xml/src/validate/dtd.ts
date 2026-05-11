@@ -225,7 +225,7 @@ async function dtdDownload(session: ISession, opts: JatsOptions) {
   const resp = await fetch(ftpUrl(opts));
   const arrayBuffer = await resp.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
-  writeFileToFolder(localDtdZipFile(opts), buffer);
+  writeFileToFolder(localDtdZipFile(opts), buffer as Uint8Array);
 }
 
 /**

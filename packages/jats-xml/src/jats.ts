@@ -44,7 +44,15 @@ import {
 type Options = { log?: Logger; source?: string };
 
 function select<T extends GenericNode>(selector: string, node?: GenericNode): T | undefined {
-  return (unistSelect(selector, node) ?? undefined) as T | undefined;
+  try {
+    return (unistSelect(selector, node) ?? undefined) as T | undefined;
+  } catch (error) {
+    const nodeType = node?.type ?? '(undefined)';
+    const msg = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      `[jats-xml/select] selector="${selector}" nodeType="${nodeType}" failed: ${msg}`,
+    );
+  }
 }
 
 const DEFAULT_DOCTYPE =
@@ -53,6 +61,21 @@ const DEFAULT_DOCTYPE =
 type WriteOptions = SerializationOptions & {
   bodyOnly?: boolean;
 };
+
+/**
+ * Drop comments and whitespace-only text nodes introduced by xml-js when
+ * `captureSpacesBetweenElements` is true (ignorable XML whitespace).
+ */
+function significantChildElements(elements: Element[] | undefined): Element[] | undefined {
+  return elements?.filter((elem) => {
+    if (elem.type === 'comment') return false;
+    if (elem.type === 'text') {
+      const t = String((elem as { text?: string }).text ?? '');
+      if (!t.trim()) return false;
+    }
+    return true;
+  });
+}
 
 export class Jats {
   declaration?: DeclarationAttributes;
@@ -67,13 +90,18 @@ export class Jats {
     this.log = opts?.log;
     if (opts?.source) this.source = opts.source;
     try {
-      this.raw = xml2js(data, { compact: false }) as Element;
+      this.raw = xml2js(data, {
+        compact: false,
+        // Preserve whitespace-only text nodes between elements. This is usually unnecessary except inside <preformat>.
+        // convertToUnist drops these outside preformat so other content is processed independent of arbitrary xml whitespace.
+        captureSpacesBetweenElements: true,
+      }) as Element;
     } catch (error) {
       throw new Error('Problem parsing the JATS document, please ensure it is XML');
     }
     const { declaration, elements } = this.raw;
     this.declaration = declaration?.attributes;
-    const filteredElements = elements?.filter((elem) => elem.type !== 'comment');
+    const filteredElements = significantChildElements(elements);
     if (filteredElements?.length && filteredElements[0].type !== 'doctype') {
       this.log?.warn('JATS is missing DOCTYPE declaration');
       filteredElements.unshift({ type: 'doctype' });
@@ -98,12 +126,19 @@ export class Jats {
     const subtitle = this.articleSubtitle;
     const short_title = this.articleAltTitle;
     let date: string | undefined;
-    if (this.publicationDate) {
-      const pubDate = toDate(this.publicationDate);
-      if (pubDate) {
-        const year = pubDate.getFullYear();
-        const month = (pubDate.getMonth() + 1).toString().padStart(2, '0');
-        const day = pubDate.getDate().toString().padStart(2, '0');
+    // Prefer a fully-specified publication date (day/month/year).
+    // If publication date is incomplete (e.g. year-only), fall back to history accepted date.
+    const preferredDateNode =
+      this.publicationDate ??
+      this.pubHistoryPubDate ??
+      this.pubHistoryAcceptedDate ??
+      this.historyAcceptedDate;
+    if (preferredDateNode) {
+      const d = toDate(preferredDateNode);
+      if (d) {
+        const year = d.getUTCFullYear();
+        const month = (d.getUTCMonth() + 1).toString().padStart(2, '0');
+        const day = d.getUTCDate().toString().padStart(2, '0');
         date = `${year}-${month}-${day}`;
       }
     }
@@ -120,8 +155,8 @@ export class Jats {
     let licenseString: string | null = null;
     if (license?.['xlink:href']) {
       licenseString = license['xlink:href'];
-    } else if (select('[type=ali:license_ref]', license)) {
-      licenseString = toText(select('[type=ali:license_ref]', license));
+    } else if (license && select('[type=ali\\:license_ref]', license)) {
+      licenseString = toText(select('[type=ali\\:license_ref]', license));
     } else if (selectAll('ext-link', license).length === 1) {
       // this should only happen if there is only one ext-link
       licenseString = (select('ext-link', license) as LinkMixin)['xlink:href'] ?? null;
@@ -192,6 +227,49 @@ export class Jats {
 
   get publicationDate(): PubDate | undefined {
     return this.publicationDates.find((d) => !!select(Tags.day, d));
+  }
+
+  /**
+   * JATS `<history>` can include multiple `<date date-type="...">` nodes,
+   * often including an "accepted" date that is a better default for project/page `date`.
+   */
+  get historyDates(): GenericParent[] {
+    return selectAll('history date', this.articleMeta ?? this.front) as GenericParent[];
+  }
+
+  get historyAcceptedDate(): GenericParent | undefined {
+    const accepted = this.historyDates.find((d) => {
+      const dt = String((d as any)['date-type'] ?? '').toLowerCase();
+      return dt === 'accepted' || dt === 'accept';
+    });
+    if (accepted && select(Tags.day, accepted)) return accepted;
+    return undefined;
+  }
+
+  /**
+   * Some sources store important dates under:
+   * `<article-meta><pub-history><event><date date-type="...">...</date></event></pub-history>`.
+   */
+  get pubHistoryDates(): GenericParent[] {
+    return selectAll('pub-history event date', this.articleMeta ?? this.front) as GenericParent[];
+  }
+
+  private findPubHistoryDateByType(types: string[]): GenericParent | undefined {
+    const wanted = new Set(types.map((t) => t.toLowerCase()));
+    const found = this.pubHistoryDates.find((d) => {
+      const dt = String((d as any)['date-type'] ?? '').toLowerCase();
+      return wanted.has(dt);
+    });
+    if (found && select(Tags.day, found)) return found;
+    return undefined;
+  }
+
+  get pubHistoryPubDate(): GenericParent | undefined {
+    return this.findPubHistoryDateByType(['pub', 'published', 'publication']);
+  }
+
+  get pubHistoryAcceptedDate(): GenericParent | undefined {
+    return this.findPubHistoryDateByType(['accepted', 'accept']);
   }
 
   get license(): License | undefined {
@@ -275,12 +353,20 @@ export class Jats {
     return selectAll(Tags.subArticle, this.tree) as SubArticle[];
   }
 
+  /** First `ref-list` in back matter. */
   get refList(): RefList | undefined {
-    return select<RefList>(Tags.refList, this.back);
+    return this.refLists[0];
   }
 
+  /** All `ref-list` elements under `back`, in document order. */
+  get refLists(): RefList[] {
+    if (!this.back) return [];
+    return selectAll(Tags.refList, this.back) as RefList[];
+  }
+
+  /** Every `ref` from every `ref-list` under `back`, in document order. */
   get references(): Reference[] {
-    return selectAll(Tags.ref, this.refList) as Reference[];
+    return this.refLists.flatMap((list) => selectAll(Tags.ref, list) as Reference[]);
   }
 
   sort() {
@@ -324,12 +410,9 @@ function hasSingleArticle(element: Element): boolean {
   if (element.name === 'article') {
     return true;
   }
-  if (
-    element.name === 'pmc-articleset' &&
-    element.elements?.length === 1 &&
-    element.elements[0].name === 'article'
-  ) {
-    return true;
+  if (element.name === 'pmc-articleset') {
+    const children = significantChildElements(element.elements);
+    return children?.length === 1 && children[0].name === 'article';
   }
   return false;
 }

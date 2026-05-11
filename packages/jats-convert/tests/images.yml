@@ -1,0 +1,18 @@
+cases:
+  - source: Current_Content/December_2019/9696df64-6c18-1014-955a-f93441f10db3
+    title: inline-formula inline-graphic becomes inline image nodes
+    jats: |-
+      <p>
+        Info about features <inline-formula><alternatives><inline-graphic xlink:href="711317v3_inline6.gif"/></alternatives></inline-formula>
+        is shared <inline-formula><alternatives><inline-graphic xlink:href="711317v3_inline7.gif"/></alternatives></inline-formula>,
+        forming <inline-formula><alternatives><inline-graphic xlink:href="711317v3_inline8.gif"/></alternatives></inline-formula> basis.
+      </p>
+    mdast:
+      type: paragraph
+      children:
+        - type: image
+          url: 711317v3_inline6.gif
+        - type: image
+          url: 711317v3_inline7.gif
+        - type: image
+          url: 711317v3_inline8.gif

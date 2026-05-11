@@ -1,0 +1,19 @@
+# Smoke + fixture file cases. Loaded by convert.spec.ts with all tests/*.yml.
+
+cases:
+  - source: smoke
+    title: paragraph text becomes myst paragraph
+    jats: |-
+      <p>Hello</p>
+    mdast:
+      type: paragraph
+      children:
+        - type: text
+          value: Hello
+
+  - source: basic.spec.ts / 00003.xml
+    title: eLife sample article converts successfuly
+    jats: 00003.xml
+    mdast:
+      type: text
+      value: LDs have antimicrobial activity

@@ -3,7 +3,7 @@ import path from 'node:path';
 import { unified } from 'unified';
 import type { Plugin } from 'unified';
 import { VFile } from 'vfile';
-import yaml from 'js-yaml';
+import { dump, load } from 'js-yaml';
 import type { MessageInfo, GenericNode, GenericParent } from 'myst-common';
 import { copyNode, fileError, RuleId, normalizeLabel } from 'myst-common';
 import { select, selectAll } from 'unist-util-select';
@@ -25,7 +25,7 @@ import {
 } from './transforms/references.js';
 import { backToBodyTransform, tableFootnotesToLegend } from './transforms/footnotes.js';
 import version from './version.js';
-import { logMessagesFromVFile, toText } from './utils.js';
+import { logMessagesFromVFile, toText, toTextPreserveWhitespace } from './utils.js';
 import { inlineCitationsTransform } from './myst/inlineCitations.js';
 import {
   abbreviationFootnoteTransform,
@@ -138,8 +138,11 @@ const handlers: Record<string, Handler> = {
   // },
   // code(node, state) {
   //   const { lang } = node as Code;
-  //   state.renderInline(node, 'code', { language: lang });
+  //   state.renderInline(node, 'code', { lang });
   // },
+  preformat(node, state) {
+    state.addLeaf('code', { value: toTextPreserveWhitespace(node), lang: 'text' });
+  },
   list(node, state) {
     // https://jats.nlm.nih.gov/archiving/tag-library/1.3/element/list.html
     state.renderInline(node, 'list', {
@@ -159,6 +162,7 @@ const handlers: Record<string, Handler> = {
         identifier,
       });
     } else {
+      // TODO: For cases where we have `<inline-formula><inline-graphic>...`, we need to keep a math wrapper somehow.
       state.renderChildren(node);
     }
   },
@@ -265,6 +269,10 @@ const handlers: Record<string, Handler> = {
     state.closeNode();
   },
   graphic(node, state) {
+    const link = node?.['xlink:href'];
+    state.addLeaf('image', { url: link });
+  },
+  ['inline-graphic'](node, state) {
     const link = node?.['xlink:href'];
     state.addLeaf('image', { url: link });
   },
@@ -771,24 +779,24 @@ export async function jatsConvert(
   const logJson = path.join(dir, `${basename}.log.json`);
   const logYml = path.join(dir, `${basename}.log.yml`);
   fs.writeFileSync(logJson, JSON.stringify(logInfo, null, 2));
-  fs.writeFileSync(logYml, yaml.dump(logInfo));
+  fs.writeFileSync(logYml, dump(logInfo));
   if (opts?.frontmatter === 'page') {
     fs.writeFileSync(mystJson, JSON.stringify({ mdast: tree, frontmatter }, null, 2));
   } else if (opts?.frontmatter === 'project') {
     if (fs.existsSync(mystYml)) {
       // console.log('myst.yml exists; overriding with frontmatter from JATS');
-      const previous = yaml.load(fs.readFileSync(mystYml).toString()) as {
+      const previous = load(fs.readFileSync(mystYml).toString()) as {
         version: number;
         project: ProjectFrontmatter;
         site: Record<string, any>;
       };
       fs.writeFileSync(
         mystYml,
-        yaml.dump({ ...previous, project: { ...previous.project, ...frontmatter } }),
+        dump({ ...previous, project: { ...previous.project, ...frontmatter } }),
       );
     } else {
       // console.log(`writing new myst.yml file`);
-      fs.writeFileSync(mystYml, yaml.dump({ version: 1, project: frontmatter, site: {} }));
+      fs.writeFileSync(mystYml, dump({ version: 1, project: frontmatter, site: {} }));
     }
     fs.writeFileSync(
       mystJson,

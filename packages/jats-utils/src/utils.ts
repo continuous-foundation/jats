@@ -3,11 +3,20 @@ import { toText } from 'myst-common';
 import type { Element } from 'xml-js';
 import { select } from 'unist-util-select';
 
-export function convertToUnist(node: Element): GenericNode | GenericParent | undefined {
+export type ConvertToUnistContext = { insidePreformat?: boolean };
+
+export function convertToUnist(
+  node: Element,
+  ctx?: ConvertToUnistContext,
+): GenericNode | GenericParent | undefined {
+  const insidePreformat = ctx?.insidePreformat ?? false;
   switch (node.type) {
     case 'element': {
       const { name, attributes, elements } = node;
-      const children = elements?.map(convertToUnist).filter((n): n is GenericNode => !!n);
+      const nextInside = insidePreformat || name === 'preformat';
+      const children = elements
+        ?.map((el) => convertToUnist(el, { insidePreformat: nextInside }))
+        .filter((n): n is GenericNode => !!n);
       const { type, ...attrs } = attributes ?? {};
       if (type !== undefined) attrs._type = type;
       const next: GenericNode = { type: name ?? 'unknown', ...attrs };
@@ -18,18 +27,24 @@ export function convertToUnist(node: Element): GenericNode | GenericParent | und
     }
     case 'text': {
       const { attributes, text } = node;
+      const raw = String(text);
+      if (!insidePreformat && !raw.trim()) {
+        return undefined;
+      }
+      const value = insidePreformat ? raw : raw.replace(/\n(\s+)$/, '');
       return {
         type: 'text',
         ...attributes,
-        value: String(text).replace(/\n(\s+)$/, ''),
+        value,
       };
     }
     case 'cdata': {
       const { attributes, cdata } = node;
+      const str = String(cdata);
       return {
         type: 'cdata',
         ...attributes,
-        cdata: String(cdata).trim(),
+        cdata: insidePreformat ? str : str.trim(),
       };
     }
     case 'comment': {
