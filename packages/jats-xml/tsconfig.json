@@ -18,6 +18,9 @@
     "strict": true,
     "lib": ["es2021", "DOM"],
     "outDir": "dist",
+    "paths": {
+      "jats-utils": ["../jats-utils/dist/index.d.ts"]
+    },
     "typeRoots": [
       "./types",
       "./node_modules/@types",

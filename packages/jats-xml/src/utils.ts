@@ -1,7 +1,6 @@
 import type { GenericNode, GenericParent } from 'myst-common';
-import { toText } from 'myst-common';
-import type { Node } from 'myst-spec';
 import { doi } from 'doi-utils';
+import { nodeText, selectText } from 'jats-utils';
 import { select, selectAll } from 'unist-util-select';
 import type { Affiliation, ArticleId, Contrib, LinkMixin, Xref } from 'jats-tags';
 import { Tags } from 'jats-tags';
@@ -16,20 +15,20 @@ export function findArticleId(
 ): string | undefined {
   if (!node) return undefined;
   const id = select(`[pub-id-type=${pubIdType}]`, node);
-  if (id && toText(id)) return toText(id);
+  if (id && nodeText(id)) return nodeText(id);
   const doiTag = (selectAll(`${Tags.articleId},${Tags.pubId}`, node) as ArticleId[]).find((t) =>
-    doi.validate(toText(t)),
+    doi.validate(nodeText(t)),
   );
-  return toText(doiTag) || undefined;
+  return nodeText(doiTag) || undefined;
 }
 
 export function processContributor(contrib: Contrib): ContributorFM {
   const author: ContributorFM = {
-    name: `${toText(select(Tags.givenNames, contrib))} ${toText(select(Tags.surname, contrib))}`,
+    name: `${selectText(contrib, Tags.givenNames)} ${selectText(contrib, Tags.surname)}`,
   };
   const orcid = select('[contrib-id-type=orcid]', contrib);
   if (orcid) {
-    author.orcid = toText(orcid).replace(/(https?:\/\/)?orcid\.org\//, '');
+    author.orcid = nodeText(orcid).replace(/(https?:\/\/)?orcid\.org\//, '');
   }
   const affiliationRefs = selectAll('xref[ref-type=aff]', contrib) as Xref[];
   const affiliationIds = affiliationRefs.map((xref) => xref.rid);
@@ -49,8 +48,8 @@ export function processContributor(contrib: Contrib): ContributorFM {
  *
  * Additionally, this returns undefined instead of empty string if node is undefined
  */
-function toTextAndTrim(content?: Node[] | Node | null): string | undefined {
-  const text = toText(content);
+function toTextAndTrim(content?: unknown): string | undefined {
+  const text = nodeText(content);
   if (!text) return undefined;
   return text.replace(/^[\s;,]+/, '').replace(/[\s;,]+$/, '');
 }

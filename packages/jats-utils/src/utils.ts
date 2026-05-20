@@ -5,8 +5,12 @@ import type { Element } from 'xml-js';
 import { select } from 'unist-util-select';
 
 /** `unist-util-select` returns @types/unist `Node`; `toText` expects myst-spec `Node`. */
-function selectText(tree: GenericParent, selector: string): string {
-  return toText(select(selector, tree) as MystNode | undefined);
+export function nodeText(node: unknown): string {
+  return toText(node as MystNode | undefined);
+}
+
+export function selectText(tree: GenericParent, selector: string): string {
+  return nodeText(select(selector, tree));
 }
 
 export type ConvertToUnistContext = { insidePreformat?: boolean };
