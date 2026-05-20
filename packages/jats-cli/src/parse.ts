@@ -157,8 +157,8 @@ async function jatsReferencesCLI(session: ISession, file: string) {
         surnames.length > 2
           ? toText(surnames[0]) + ' et al.'
           : surnames.length === 2
-          ? toText(surnames[0]) + ' and ' + toText(surnames[1])
-          : toText(surnames[0]);
+            ? toText(surnames[0]) + ' and ' + toText(surnames[1])
+            : toText(surnames[0]);
       const s = selectAll(`[rid=${ref.id}]`, jats.body);
       return {
         Citation: `${short} (${year})`,

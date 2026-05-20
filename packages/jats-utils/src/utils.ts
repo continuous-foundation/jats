@@ -1,7 +1,17 @@
 import type { GenericNode, GenericParent } from 'myst-common';
 import { toText } from 'myst-common';
+import type { Node as MystNode } from 'myst-spec';
 import type { Element } from 'xml-js';
 import { select } from 'unist-util-select';
+
+/** `unist-util-select` returns @types/unist `Node`; `toText` expects myst-spec `Node`. */
+export function nodeText(node: unknown): string {
+  return toText(node as MystNode | undefined);
+}
+
+export function selectText(tree: GenericParent, selector: string): string {
+  return nodeText(select(selector, tree));
+}
 
 export type ConvertToUnistContext = { insidePreformat?: boolean };
 
@@ -124,13 +134,13 @@ export function toDate(date?: GenericParent): Date | undefined {
   if (!date) return;
   const isoDate = date['iso-8601-date'];
   if (isoDate) return new Date(isoDate);
-  const year = Number(toText(select('year', date)));
+  const year = Number(selectText(date, 'year'));
   if (!year || Number.isNaN(year)) return;
-  const monthText = toText(select('month', date));
+  const monthText = selectText(date, 'month');
   const monthTextNumber = Number(monthText);
   const month = Number.isNaN(monthTextNumber) ? MonthLookup[monthText] : monthTextNumber - 1;
   if (month == null) return new Date(Date.UTC(year, 0));
-  const day = Number(toText(select('day', date)));
+  const day = Number(selectText(date, 'day'));
   if (!day || Number.isNaN(day)) return new Date(Date.UTC(year, month));
   return new Date(Date.UTC(year, month, day));
 }
