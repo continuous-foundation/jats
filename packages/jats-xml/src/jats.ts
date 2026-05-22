@@ -149,7 +149,12 @@ export class Jats {
       return processAffiliation(aff);
     });
     const keywords = this.keywords?.map((k) => toText(k)) ?? [];
-    const firstSubject = select(Tags.subject, this.articleCategories ?? this.front);
+    const subjectScope = this.articleCategories ?? this.front;
+    const journalCollSubject = select(
+      `${Tags.subjGroup}[subj-group-type="hwp-journal-coll"] ${Tags.subject}`,
+      subjectScope,
+    );
+    const articleSubject = journalCollSubject ?? select(Tags.subject, subjectScope);
     const journalTitle = select(Tags.journalTitle, this.front);
     const license = this.license;
     let licenseString: string | null = null;
@@ -188,7 +193,7 @@ export class Jats {
         affiliations: affiliations.length ? affiliations : undefined,
         keywords: keywords.length ? keywords : undefined,
         venue: journalTitle ? { title: toText(journalTitle) } : undefined,
-        subject: firstSubject ? toText(firstSubject) : undefined,
+        subject: articleSubject ? toText(articleSubject) : undefined,
         license: licenseString ?? undefined,
         open_access: openAccess,
       },

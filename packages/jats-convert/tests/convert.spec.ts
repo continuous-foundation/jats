@@ -11,6 +11,8 @@
  *   was read from a file or already contains `<back>`.
  * - `opts`: passed to jatsConvertTransform
  * - `mdast`: partial tree matched somewhere under the result. See helpers/mdastPartial.ts
+ * - `frontmatter`: optional partial frontmatter matched with expect(...).toMatchObject(...)
+ * - `expect_no_description`: when true, asserts `frontmatter.description` is undefined
  */
 import { describe, expect, test } from 'vitest';
 import fs from 'node:fs';
@@ -31,6 +33,8 @@ type ConvertYamlCase = {
   jats: string;
   jats_back?: string;
   mdast: unknown;
+  frontmatter?: Record<string, unknown>;
+  expect_no_description?: boolean;
   opts?: Options;
 };
 
@@ -62,7 +66,7 @@ describe('JATS → mdast (YAML fixtures)', () => {
     describe(file, () => {
       test.each(cases.map((c): [string, ConvertYamlCase] => [c.title, c]))('%s', (_, c) => {
         const xml = prepareJatsXmlForConvert(testsDir, c.jats, c.jats_back, c.title);
-        const { tree } = jatsConvertTransform(new Jats(xml), c.opts);
+        const { tree, frontmatter } = jatsConvertTransform(new Jats(xml), c.opts);
         expect(
           treeContainsPartial(tree, c.mdast),
           [
@@ -73,6 +77,12 @@ describe('JATS → mdast (YAML fixtures)', () => {
             `Actual tree: ${JSON.stringify(tree, null, 2)}`,
           ].join('\n'),
         ).toBe(true);
+        if (c.frontmatter !== undefined) {
+          expect(frontmatter).toMatchObject(c.frontmatter);
+        }
+        if (c.expect_no_description) {
+          expect(frontmatter.description).toBeUndefined();
+        }
       });
     });
   }
