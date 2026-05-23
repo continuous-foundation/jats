@@ -1,5 +1,15 @@
 # jats-convert
 
+## 1.1.3
+
+### Patch Changes
+
+- 4118456: Fix infinite loop on abstract section lifting
+- 4118456: Fix crash during citation transform
+  - jats-xml@1.1.3
+  - jats-tags@1.1.3
+  - jats-fetch@1.1.3
+
 ## 1.1.2
 
 ### Patch Changes

@@ -1,5 +1,12 @@
 # meca
 
+## 1.1.3
+
+### Patch Changes
+
+- jats-xml@1.1.3
+- jats-utils@1.1.3
+
 ## 1.1.2
 
 ### Patch Changes
