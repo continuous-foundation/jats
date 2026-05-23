@@ -759,3 +759,52 @@ cases:
                   label: example_2020
                   identifier: example_2020
                   kind: parenthetical
+  - title: Opening bracket without closer after citeGroup does not crash
+    before:
+      type: root
+      children:
+        - type: paragraph
+          children:
+            - type: superscript
+              children:
+                - type: text
+                  value: '['
+                - type: citeGroup
+                  kind: parenthetical
+                  children:
+                    - type: cite
+                      kind: parenthetical
+                      label: example_2020
+                      identifier: example_2020
+                - type: text
+                  value: '] ['
+                - type: citeGroup
+                  kind: parenthetical
+                  children:
+                    - type: cite
+                      kind: parenthetical
+                      label: example_2021
+                      identifier: example_2021
+    after:
+      type: root
+      children:
+        - type: paragraph
+          children:
+            - type: superscript
+              children:
+                - type: citeGroup
+                  kind: parenthetical
+                  children:
+                    - type: cite
+                      kind: parenthetical
+                      label: example_2020
+                      identifier: example_2020
+                - type: text
+                  value: ' ['
+                - type: citeGroup
+                  kind: parenthetical
+                  children:
+                    - type: cite
+                      kind: parenthetical
+                      label: example_2021
+                      identifier: example_2021
