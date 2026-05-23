@@ -17,8 +17,10 @@ export function convertToUnist(
       const children = elements
         ?.map((el) => convertToUnist(el, { insidePreformat: nextInside }))
         .filter((n): n is GenericNode => !!n);
-      const { type, ...attrs } = attributes ?? {};
+      const { type, position, ...attrs } = attributes ?? {};
       if (type !== undefined) attrs._type = type;
+      // JATS layout position (e.g. float, anchor) must not use `position` — that is reserved for source locations in mdast.
+      if (position !== undefined) attrs._position = position;
       const next: GenericNode = { type: name ?? 'unknown', ...attrs };
       if (name === 'code') {
         next.value = elements?.[0].text as string;
@@ -82,8 +84,9 @@ export function convertToXml(node: GenericNode): Element {
       return { type: 'cdata', attributes, cdata };
     }
     default: {
-      const { children, _type, ...attributes } = rest;
+      const { children, _type, _position, ...attributes } = rest;
       if (_type !== undefined) attributes.type = _type;
+      if (_position !== undefined) attributes.position = _position;
       return { type: 'element', name: type, attributes, elements: children?.map(convertToXml) };
     }
   }
