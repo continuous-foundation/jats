@@ -186,4 +186,71 @@ describe('abstract transform', () => {
     abstractTransform(abstract);
     expect(abstract).toEqual(expected);
   });
+  test('abstract with lone section unwraps and bolds title', async () => {
+    const abstract = {
+      type: 'abstract',
+      children: [
+        {
+          type: 'sec',
+          children: [
+            {
+              type: 'title',
+              children: [{ type: 'text', value: 'Key messages' }],
+            },
+            {
+              type: 'list',
+              'list-type': 'bullet',
+              children: [
+                {
+                  type: 'list-item',
+                  children: [
+                    {
+                      type: 'p',
+                      children: [{ type: 'text', value: 'First item.' }],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    const expected = {
+      type: 'abstract',
+      children: [
+        {
+          type: 'block',
+          children: [
+            {
+              type: 'p',
+              children: [
+                {
+                  type: 'bold',
+                  children: [{ type: 'text', value: 'Key messages' }],
+                },
+              ],
+            },
+            {
+              type: 'list',
+              'list-type': 'bullet',
+              children: [
+                {
+                  type: 'list-item',
+                  children: [
+                    {
+                      type: 'p',
+                      children: [{ type: 'text', value: 'First item.' }],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    abstractTransform(abstract);
+    expect(abstract).toEqual(expected);
+  });
 });

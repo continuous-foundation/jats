@@ -56,15 +56,18 @@ function recurseSections(tree: GenericNode, depth = 1, titleType?: 'heading' | '
  * - Flatten the sections
  */
 export function sectionTransform(tree: GenericParent, titleType?: 'heading' | 'strong') {
-  liftApps(tree);
-  recurseSections(tree, 1, titleType);
-  remove(tree, '__delete__');
-  const topSections = tree.children?.filter((n) => isSection(n));
-  topSections.forEach((sec) => {
+  const workTree = isSection(tree) ? { type: 'root', children: [tree] } : tree;
+  liftApps(workTree);
+  recurseSections(workTree, 1, titleType);
+  remove(workTree, '__delete__');
+  const topSections = workTree.children?.filter((n) => isSection(n));
+  topSections?.forEach((sec) => {
     sec.type = 'block';
   });
-  while (select('sec', tree)) liftChildren(tree as any, 'sec');
-  blockNestingTransform(tree as any);
+  while (select('sec', workTree)) {
+    liftChildren(workTree as any, 'sec');
+  }
+  blockNestingTransform(workTree as any);
 }
 
 export const sectionPlugin: Plugin<[], GenericParent, GenericParent> = () => (tree) => {

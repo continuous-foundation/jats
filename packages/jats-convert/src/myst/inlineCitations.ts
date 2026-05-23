@@ -115,7 +115,7 @@ function removeCiteParentheses(tree: GenericParent) {
       const citeChild = parent.children[index + 1];
       if (citeChild?.type !== 'citeGroup') return;
       const nextChild = parent.children[index + 2];
-      if (nextChild.type !== 'text' || nextChild.value?.[0] !== closer) return;
+      if (nextChild?.type !== 'text' || nextChild.value?.[0] !== closer) return;
       child.value = child.value.slice(0, -1);
       if (!child.value) child.type = '__delete__';
       citeChild.kind = 'parenthetical';
