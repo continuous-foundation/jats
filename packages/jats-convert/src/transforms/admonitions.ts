@@ -6,6 +6,37 @@ import { remove } from 'unist-util-remove';
 import { Tags } from 'jats-tags';
 import type { VFile } from 'vfile';
 
+type BoxedTextTitle = {
+  title: GenericParent;
+  nodeToReplace: GenericParent;
+};
+
+/**
+ * Find the admonition title for a boxed-text.
+ */
+function findBoxedTextTitle(boxedText: GenericParent): BoxedTextTitle | undefined {
+  const directCaption = boxedText.children?.find((child) => child.type === Tags.caption) as
+    | GenericParent
+    | undefined;
+  if (directCaption) {
+    const title = select(Tags.title, directCaption) as GenericParent | undefined;
+    if (title) return { title, nodeToReplace: directCaption };
+  }
+
+  const directTitle = boxedText.children?.find((child) => child.type === Tags.title) as
+    | GenericParent
+    | undefined;
+  if (directTitle) return { title: directTitle, nodeToReplace: directTitle };
+
+  const secTitle = select(`${Tags.sec} > ${Tags.title}`, boxedText) as GenericParent | undefined;
+  if (secTitle) return { title: secTitle, nodeToReplace: secTitle };
+
+  const secHeading = select(`${Tags.sec} > heading`, boxedText) as GenericParent | undefined;
+  if (secHeading) return { title: secHeading, nodeToReplace: secHeading };
+
+  return undefined;
+}
+
 /**
  * Convert boxed-text caption to admonitionTitle (with content from caption > title)
  *
@@ -18,17 +49,14 @@ import type { VFile } from 'vfile';
 export function admonitionTransform(tree: GenericParent, file: VFile) {
   const boxedTexts = selectAll(Tags.boxedText, tree) as GenericParent[];
   boxedTexts.forEach((boxedText) => {
-    const caption = select(`${Tags.caption}`, boxedText) as GenericParent;
-    const title = caption
-      ? (select(Tags.title, caption) as GenericParent)
-      : (select(Tags.title, boxedText) as GenericParent);
-    if (!title) {
+    const found = findBoxedTextTitle(boxedText);
+    if (!found) {
       fileWarn(file, 'Encountered boxed-text without title', {
         node: boxedText,
         ruleId: RuleId.jatsParses,
       });
     } else {
-      const nodeToReplace = caption ?? title;
+      const { title, nodeToReplace } = found;
       nodeToReplace.type = 'admonitionTitle';
       nodeToReplace.children = title.children;
     }
