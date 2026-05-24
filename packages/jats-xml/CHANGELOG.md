@@ -1,5 +1,14 @@
 # jats-xml
 
+## 1.1.4
+
+### Patch Changes
+
+- 2459856: Ignore malformed declaration
+- Updated dependencies [2459856]
+  - jats-utils@1.1.4
+  - jats-tags@1.1.4
+
 ## 1.1.3
 
 ### Patch Changes

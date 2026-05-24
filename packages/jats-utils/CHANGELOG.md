@@ -1,5 +1,12 @@
 # jats-utils
 
+## 1.1.4
+
+### Patch Changes
+
+- 2459856: Handle 'position' JATS attribute and mdast property conflict
+  - jats-tags@1.1.4
+
 ## 1.1.3
 
 ### Patch Changes
