@@ -1,5 +1,18 @@
 # jats-cli
 
+## 1.1.4
+
+### Patch Changes
+
+- Updated dependencies [2459856]
+- Updated dependencies [2459856]
+- Updated dependencies [2459856]
+  - jats-xml@1.1.4
+  - jats-convert@1.1.4
+  - jats-utils@1.1.4
+  - jats-tags@1.1.4
+  - jats-fetch@1.1.4
+
 ## 1.1.3
 
 ### Patch Changes

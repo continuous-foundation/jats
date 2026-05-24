@@ -1,5 +1,16 @@
 # jats-convert
 
+## 1.1.4
+
+### Patch Changes
+
+- 2459856: Handle 'position' JATS attribute and mdast property conflict
+- 2459856: Improve boxed-text title logic
+- Updated dependencies [2459856]
+  - jats-xml@1.1.4
+  - jats-tags@1.1.4
+  - jats-fetch@1.1.4
+
 ## 1.1.3
 
 ### Patch Changes
