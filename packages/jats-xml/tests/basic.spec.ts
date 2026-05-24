@@ -227,3 +227,13 @@ describe('JATS XML attributes', () => {
     expect(roundTrip.attributes?.position).toBe('float');
   });
 });
+
+describe('JATS XML prolog', () => {
+  test('drops leading instruction before doctype and article', () => {
+    const data = `<?version xml="1.0" encoding="UTF-8"?>
+<!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Archiving and Interchange DTD v1.2d1 20170631//EN" "JATS-archivearticle1.dtd">
+<article><front></front></article>`;
+    const jats = new Jats(data);
+    expect(jats.tree.type).toBe('article');
+  });
+});
