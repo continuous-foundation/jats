@@ -1,10 +1,13 @@
 import { describe, expect, test } from 'vitest';
 import fs from 'fs';
+import type { GenericNode } from 'myst-common';
 import { toText } from 'myst-common';
 import { select } from 'unist-util-select';
+import { xml2js } from 'xml-js';
+import type { Element } from 'xml-js';
 import { inferOptions, Jats } from '../src';
 import { Tags } from 'jats-tags';
-import { formatDate, toDate } from 'jats-utils';
+import { convertToUnist, convertToXml, formatDate, toDate } from 'jats-utils';
 import { processAffiliation, processContributor } from '../src/utils';
 
 describe('Basic JATS read', () => {
@@ -209,5 +212,28 @@ describe('Basic JATS read', () => {
 </article>`;
     const jats = new Jats(data);
     expect(jats.frontmatter.date).toEqual('2014-01-02');
+  });
+});
+
+describe('JATS XML attributes', () => {
+  test('position attribute is stored as _position to avoid mdast collision', () => {
+    const xml =
+      '<boxed-text id="box1" position="float"><sec><title>Box title</title></sec></boxed-text>';
+    const { elements } = xml2js(xml, { compact: false }) as Element;
+    const node = convertToUnist(elements![0]) as GenericNode;
+    expect(node.position).toBeUndefined();
+    expect(node._position).toBe('float');
+    const roundTrip = convertToXml(node);
+    expect(roundTrip.attributes?.position).toBe('float');
+  });
+});
+
+describe('JATS XML prolog', () => {
+  test('drops leading instruction before doctype and article', () => {
+    const data = `<?version xml="1.0" encoding="UTF-8"?>
+<!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Archiving and Interchange DTD v1.2d1 20170631//EN" "JATS-archivearticle1.dtd">
+<article><front></front></article>`;
+    const jats = new Jats(data);
+    expect(jats.tree.type).toBe('article');
   });
 });
