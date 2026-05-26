@@ -78,19 +78,11 @@ function significantChildElements(elements: Element[] | undefined): Element[] | 
 }
 
 /**
- * Drop a leading processing instruction when it precedes doctype and the root element.
+ * Drop top-level processing instructions (e.g. xml-stylesheet) from the prolog.
  * Malformed prologs such as <?version xml="1.0"?> are parsed this way by xml-js.
  */
-function dropLeadingPrologInstruction(elements: Element[] | undefined): Element[] | undefined {
-  if (
-    elements?.length === 3 &&
-    elements[0].type === 'instruction' &&
-    elements[1].type === 'doctype' &&
-    elements[2].type === 'element'
-  ) {
-    return elements.slice(1);
-  }
-  return elements;
+function dropTopLevelInstructions(elements: Element[] | undefined): Element[] | undefined {
+  return elements?.filter((elem) => elem.type !== 'instruction');
 }
 
 export class Jats {
@@ -117,7 +109,7 @@ export class Jats {
     }
     const { declaration, elements } = this.raw;
     this.declaration = declaration?.attributes;
-    const filteredElements = dropLeadingPrologInstruction(significantChildElements(elements));
+    const filteredElements = dropTopLevelInstructions(significantChildElements(elements));
     if (filteredElements?.length && filteredElements[0].type !== 'doctype') {
       this.log?.warn('JATS is missing DOCTYPE declaration');
       filteredElements.unshift({ type: 'doctype' });

@@ -236,4 +236,13 @@ describe('JATS XML prolog', () => {
     const jats = new Jats(data);
     expect(jats.tree.type).toBe('article');
   });
+
+  test('drops xml-stylesheet instruction between doctype and article', () => {
+    const data = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Archiving and Interchange DTD v1.2d1 20170631//EN" "JATS-archivearticle1.dtd">
+<?xml-stylesheet type="text/xsl" href="D:\\Tool\\View_head\\bits.xsl"?>
+<article><front></front></article>`;
+    const jats = new Jats(data);
+    expect(jats.tree.type).toBe('article');
+  });
 });
