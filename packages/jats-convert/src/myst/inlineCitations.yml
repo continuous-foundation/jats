@@ -759,6 +759,67 @@ cases:
                   label: example_2020
                   identifier: example_2020
                   kind: parenthetical
+  - title: Superscript with comma and hyphenated range collapses to single citeGroup
+    before:
+      type: root
+      children:
+        - type: paragraph
+          children:
+            - type: text
+              value: 'metal nanomaterials, such as Ag'
+            - type: superscript
+              children:
+                - type: cite
+                  label: example_2019
+                  identifier: example_2019
+                  kind: narrative
+                  children:
+                    - type: text
+                      value: '19'
+                - type: text
+                  value: ', '
+                - type: cite
+                  label: example_2021
+                  identifier: example_2021
+                  kind: narrative
+                  children:
+                    - type: text
+                      value: '21'
+                - type: text
+                  value: '-'
+                - type: cite
+                  label: example_2023
+                  identifier: example_2023
+                  kind: narrative
+                  children:
+                    - type: text
+                      value: '23'
+    after:
+      type: root
+      children:
+        - type: paragraph
+          children:
+            - type: text
+              value: 'metal nanomaterials, such as Ag '
+            - type: citeGroup
+              kind: narrative
+              children:
+                - type: cite
+                  label: example_2019
+                  identifier: example_2019
+                  kind: narrative
+                - type: cite
+                  label: example_2021
+                  identifier: example_2021
+                  kind: narrative
+                - type: cite
+                  label: example_2022
+                  identifier: example_2022
+                  kind: narrative
+                - type: cite
+                  label: example_2023
+                  identifier: example_2023
+                  kind: narrative
   - title: Opening bracket without closer after citeGroup does not crash
     before:
       type: root
