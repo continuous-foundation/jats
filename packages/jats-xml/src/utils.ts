@@ -98,7 +98,7 @@ export function processAffiliation(aff: Affiliation): AffiliationFM {
     countryNode,
   ]);
   remove(aff, '__delete__');
-  const affChildren = aff.children.filter((child) => child.type !== 'label');
+  const affChildren = aff.children?.filter((child) => child.type !== 'label') ?? [];
   let institution: string | undefined;
   if (
     affChildren.filter((child) => ['text', 'institution-wrap', 'institution'].includes(child.type))
