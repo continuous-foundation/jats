@@ -34,6 +34,7 @@ import type { Logger } from 'myst-cli-utils';
 import { tic } from 'myst-cli-utils';
 import type { VFile } from 'vfile';
 import { type JatsPrologWarning, recordJatsPrologWarning } from './messages.js';
+import { knownXmlDefectRepairMessage, repairKnownXmlDefects } from './repairKnownXmlDefects.js';
 import { sanitizeXmlEntities } from './sanitizeXmlEntities.js';
 import { articleMetaOrder, tableWrapOrder } from './order.js';
 import {
@@ -116,7 +117,13 @@ export class Jats {
     const warnProlog = (reason: string, note?: string) => {
       recordJatsPrologWarning(this.prologWarnings, vfile, reason, note);
     };
-    const { xml: parseInput, escapedBareAmpersandCount } = sanitizeXmlEntities(data);
+    const { xml: afterDefectRepairs, applied: defectRepairs } = repairKnownXmlDefects(data);
+    defectRepairs.forEach(({ repair, count }) => {
+      const reason = knownXmlDefectRepairMessage(repair.from, repair.to);
+      const note = count === 1 ? undefined : `${count} occurrences`;
+      warnProlog(reason, note);
+    });
+    const { xml: parseInput, escapedBareAmpersandCount } = sanitizeXmlEntities(afterDefectRepairs);
     if (escapedBareAmpersandCount > 0) {
       const note =
         escapedBareAmpersandCount === 1
