@@ -32,6 +32,8 @@ import type {
 } from 'jats-tags';
 import type { Logger } from 'myst-cli-utils';
 import { tic } from 'myst-cli-utils';
+import type { VFile } from 'vfile';
+import { type JatsPrologWarning, recordJatsPrologWarning } from './messages.js';
 import { articleMetaOrder, tableWrapOrder } from './order.js';
 import {
   serializeJatsXml,
@@ -41,7 +43,7 @@ import {
   toDate,
 } from 'jats-utils';
 
-type Options = { log?: Logger; source?: string };
+type Options = { log?: Logger; source?: string; vfile?: VFile };
 
 function select<T extends GenericNode>(selector: string, node?: GenericNode): T | undefined {
   try {
@@ -81,8 +83,17 @@ function significantChildElements(elements: Element[] | undefined): Element[] | 
  * Drop top-level processing instructions (e.g. xml-stylesheet) from the prolog.
  * Malformed prologs such as <?version xml="1.0"?> are parsed this way by xml-js.
  */
-function dropTopLevelInstructions(elements: Element[] | undefined): Element[] | undefined {
-  return elements?.filter((elem) => elem.type !== 'instruction');
+function dropTopLevelInstructions(
+  elements: Element[] | undefined,
+  onInstruction?: (instruction: Element) => void,
+): Element[] | undefined {
+  return elements?.filter((elem) => {
+    if (elem.type === 'instruction') {
+      onInstruction?.(elem);
+      return false;
+    }
+    return true;
+  });
 }
 
 export class Jats {
@@ -92,6 +103,8 @@ export class Jats {
   log?: Logger;
   tree: GenericParent;
   source?: string;
+  /** Prolog fixes recorded when no VFile was available at parse time. */
+  prologWarnings?: JatsPrologWarning[];
 
   constructor(data: string, opts?: Options) {
     const toc = tic();
@@ -109,9 +122,22 @@ export class Jats {
     }
     const { declaration, elements } = this.raw;
     this.declaration = declaration?.attributes;
-    const filteredElements = dropTopLevelInstructions(significantChildElements(elements));
+    const vfile = opts?.vfile;
+    if (!vfile) this.prologWarnings = [];
+    const warnProlog = (reason: string, note?: string) => {
+      recordJatsPrologWarning(this.prologWarnings, vfile, reason, note);
+    };
+    const filteredElements = dropTopLevelInstructions(
+      significantChildElements(elements),
+      (instruction) => {
+        const name = instruction.name ?? '(unnamed)';
+        const body = String(instruction.instruction ?? '').trim();
+        const note = body ? `name=${name} ${body}` : `name=${name}`;
+        warnProlog('Removed top-level XML processing instruction from prolog', note);
+      },
+    );
     if (filteredElements?.length && filteredElements[0].type !== 'doctype') {
-      this.log?.warn('JATS is missing DOCTYPE declaration');
+      warnProlog('JATS is missing DOCTYPE declaration; inserted empty doctype');
       filteredElements.unshift({ type: 'doctype' });
     }
     if (
@@ -124,6 +150,9 @@ export class Jats {
       throw new Error('JATS must be structured as <!DOCTYPE><article>...</article>');
     }
     this.doctype = filteredElements[0].doctype;
+    if (filteredElements[1].name === 'pmc-articleset') {
+      warnProlog('JATS root is pmc-articleset wrapper', 'Using nested article element');
+    }
     const converted = convertToUnist(filteredElements[1]);
     this.tree = select('article', converted) as GenericParent;
     this.log?.debug(toc('Parsed and converted JATS to unist tree in %s'));

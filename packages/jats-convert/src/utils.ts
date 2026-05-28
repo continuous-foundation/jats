@@ -36,6 +36,7 @@ export function copyNode(node: Node) {
 export function vfileMessagesForLogInfo(file: VFile) {
   return file.messages.map((message) => ({
     reason: message.reason,
+    note: message.note,
     fatal: message.fatal,
     source: message.source,
     ruleId: (message as { ruleId?: string }).ruleId,

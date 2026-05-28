@@ -26,7 +26,7 @@ describe('Section title transforms', () => {
     '%s',
     async (_, { before, after, titleType }) => {
       if (!after) after = copyNode(before);
-      sectionTransform(before, titleType as any);
+      sectionTransform(before, { titleType: titleType as 'heading' | 'strong' | undefined });
       expect(before).toEqual(after);
     },
   );

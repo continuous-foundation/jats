@@ -19,16 +19,16 @@ export * from './sections.js';
 export * from './typography.js';
 
 export function basicTransformations(body: Body, file: VFile) {
-  sectionTransform(body);
+  sectionTransform(body, { file });
   typographyTransform(body);
   admonitionTransform(body, file);
-  figCaptionTitleTransform(body);
+  figCaptionTitleTransform(body, file);
 }
 
 export const basicTransformationsPlugin: Plugin<[], Body, Body> = () => (body, file) => {
   basicTransformations(body, file);
 };
 
-export function journalTransforms(fullTree: GenericNode, body: Body) {
-  graphicToBioRxivUrl(fullTree, body);
+export function journalTransforms(fullTree: GenericNode, body: Body, file?: VFile) {
+  graphicToBioRxivUrl(fullTree, body, file);
 }

@@ -1,6 +1,8 @@
 import type { GenericParent } from 'myst-common';
 import { liftChildren, toText } from 'myst-common';
 import { remove } from 'unist-util-remove';
+import type { VFile } from 'vfile';
+import { jatsFileWarn } from '../messages.js';
 import { sectionTransform } from './sections.js';
 
 /**
@@ -9,22 +11,33 @@ import { sectionTransform } from './sections.js';
  * This removes "Abstract" title and prevents block nesting
  * inside the abstract.
  */
-export function abstractTransform(tree: GenericParent) {
+export function abstractTransform(tree: GenericParent, file?: VFile) {
   if (tree.children?.length === 1 && tree.children[0].type === 'sec') {
-    abstractTransform(tree.children[0] as GenericParent);
+    abstractTransform(tree.children[0] as GenericParent, file);
     return;
   }
-  sectionTransform(tree, 'strong');
+  sectionTransform(tree, { file, titleType: 'strong' });
   liftChildren(tree, 'block');
   const title = tree.children?.[0] as GenericParent | undefined;
   if (title?.type !== 'title') return;
   const nextNode = tree.children[1] as GenericParent | undefined;
   if (toText(title).toUpperCase().trim() === 'ABSTRACT') {
+    jatsFileWarn(file, 'Removed redundant Abstract title from abstract section', {
+      source: 'jats-convert:abstract',
+    });
     title.type = '__delete__';
   } else if (nextNode?.type === 'p') {
+    jatsFileWarn(file, 'Merged abstract title into first paragraph', {
+      source: 'jats-convert:abstract',
+      note: `title=${toText(title)}`,
+    });
     nextNode.children = [...title.children, { type: 'text', value: ' ' }, ...nextNode.children];
     title.type = '__delete__';
   } else {
+    jatsFileWarn(file, 'Converted abstract title to paragraph', {
+      source: 'jats-convert:abstract',
+      note: `title=${toText(title)}`,
+    });
     title.type = 'p';
   }
   remove(tree, '__delete__');

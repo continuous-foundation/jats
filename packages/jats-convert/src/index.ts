@@ -5,13 +5,13 @@ import type { Plugin } from 'unified';
 import { VFile } from 'vfile';
 import { dump, load } from 'js-yaml';
 import type { MessageInfo, GenericNode, GenericParent } from 'myst-common';
-import { copyNode, fileError, RuleId, normalizeLabel } from 'myst-common';
+import { copyNode, normalizeLabel } from 'myst-common';
+import { flushJatsPrologWarnings, Jats } from 'jats-xml';
 import { select, selectAll } from 'unist-util-select';
 import { u } from 'unist-builder';
 import type { Body, License, LinkMixin } from 'jats-tags';
 import { RefType } from 'jats-tags';
 import type { ISession } from 'jats-xml';
-import { Jats } from 'jats-xml';
 import { MathMLToLaTeX } from 'mathml-to-latex';
 import { js2xml } from 'xml-js';
 import type { Handler, IJatsParser, JatsResult, Options, StateData } from './types.js';
@@ -25,6 +25,7 @@ import {
 } from './transforms/references.js';
 import { backToBodyTransform, tableFootnotesToLegend } from './transforms/footnotes.js';
 import version from './version.js';
+import { jatsFileError, jatsFileWarn } from './messages.js';
 import {
   logMessagesFromVFile,
   toText,
@@ -167,7 +168,9 @@ const handlers: Record<string, Handler> = {
         identifier,
       });
     } else {
-      // TODO: For cases where we have `<inline-formula><inline-graphic>...`, we need to keep a math wrapper somehow.
+      state.warn('Reduced inline-formula without TeX or MathML to child nodes', 'inline-formula', {
+        note: node.id ? `id=${node.id}` : undefined,
+      });
       state.renderChildren(node);
     }
   },
@@ -181,6 +184,9 @@ const handlers: Record<string, Handler> = {
         identifier,
       });
     } else {
+      state.warn('Converted disp-formula without TeX or MathML to paragraph', 'disp-formula', {
+        note: node.id ? `id=${node.id}` : undefined,
+      });
       if (node.id) {
         state.openNode('div', { label, identifier });
       }
@@ -292,6 +298,11 @@ const handlers: Record<string, Handler> = {
     const link = graphic?.['xlink:href'];
     if (link) {
       state.addLeaf('image', { url: link });
+    } else {
+      const detail = graphic ? 'graphic or media without xlink:href' : 'no graphic or media child';
+      state.warn('Figure has no image URL', 'fig', {
+        note: node.id ? `id=${node.id} ${detail}` : detail,
+      });
     }
     state.openNode('caption');
     if (title) {
@@ -369,14 +380,29 @@ const handlers: Record<string, Handler> = {
     state.closeNode();
   },
   hr(node, state) {
-    if (state.data.isInContainer) return;
+    if (state.data.isInContainer) {
+      state.warn('Dropped hr inside figure or table container', 'hr');
+      return;
+    }
     state.addLeaf('thematicBreak');
   },
   alternatives(node, state) {
     const choice = node.children?.find((child) => !!state.handlers[child.type]);
     if (!choice) {
-      state.error(`No supported types in 'alternatives' node`);
+      const types = node.children?.map((child) => child.type).join(', ') ?? '';
+      state.error('No supported types in alternatives node', 'alternatives', {
+        note: types ? `children=${types}` : undefined,
+      });
     } else {
+      const dropped = node.children
+        ?.filter((child) => child !== choice)
+        .map((child) => child.type)
+        .join(', ');
+      if (dropped) {
+        state.warn('Using first supported alternative only', 'alternatives', {
+          note: `chosen=${choice.type} dropped=${dropped}`,
+        });
+      }
       state.handlers[choice.type](choice, state, node);
     }
   },
@@ -428,7 +454,7 @@ const handlers: Record<string, Handler> = {
       }
       default: {
         state.renderInline(node, 'crossReference', { identifier: node.rid });
-        state.warn(`Unknown ref-type of ${refType}`);
+        state.warn('Unknown xref ref-type', 'xref', { note: `ref-type=${refType}` });
         return;
       }
     }
@@ -473,6 +499,17 @@ const handlers: Record<string, Handler> = {
       state.closeNode();
       state.data.isInContainer = wasInContainer;
     } else {
+      let detail: string;
+      if (!media) {
+        detail = 'missing expected media child';
+      } else if (!url) {
+        detail = 'media without xlink:href';
+      } else {
+        detail = `url not a figure media extension: ${url}`;
+      }
+      state.warn('Supplementary-material rendered as generic content', 'supplementary-material', {
+        note: node.id ? `id=${node.id} ${detail}` : detail,
+      });
       if (node.id) {
         state.openNode('div', { label, identifier });
       }
@@ -512,9 +549,12 @@ const handlers: Record<string, Handler> = {
   comment() {},
   __ignore__() {},
   ['object-id'](node, state) {
-    // TODO: handle other id types?
     if (node['pub-id-type'] === 'doi') {
       state.top().doi = toText(node);
+    } else if (node['pub-id-type']) {
+      state.warn('Ignored object-id pub-id-type', 'object-id', {
+        note: `pub-id-type=${node['pub-id-type']}`,
+      });
     }
   },
 };
@@ -545,18 +585,16 @@ export class JatsParser implements IJatsParser {
   }
 
   warn(message: string, source?: string, opts?: MessageInfo) {
-    fileError(this.file, message, {
+    jatsFileWarn(this.file, message, {
       ...opts,
-      source: source ? `jats-convert:${source}` : 'jats-convert',
-      ruleId: RuleId.jatsParses,
+      source: source ? `jats-convert:${source}` : undefined,
     });
   }
 
   error(message: string, source?: string, opts?: MessageInfo) {
-    fileError(this.file, message, {
+    jatsFileError(this.file, message, {
       ...opts,
-      source: source ? `jats-convert:${source}` : 'jats-convert',
-      ruleId: RuleId.jatsParses,
+      source: source ? `jats-convert:${source}` : undefined,
     });
   }
 
@@ -588,7 +626,7 @@ export class JatsParser implements IJatsParser {
         handler(child, this, node);
       } else {
         this.unhandled.push(child.type);
-        this.error(`Unhandled JATS conversion for node of "${child.type}"`);
+        this.error('Unhandled JATS conversion for node', undefined, { note: `type=${child.type}` });
       }
     });
   }
@@ -622,8 +660,9 @@ export class JatsParser implements IJatsParser {
 
 export const jatsConvertPlugin: Plugin<[Jats, Options?], Body, Body> = function (jats, opts) {
   this.Compiler = (body: Body, file: VFile) => {
+    flushJatsPrologWarnings(jats, file);
     if (jats.abstract) {
-      abstractTransform(jats.abstract);
+      abstractTransform(jats.abstract, file);
       body.children = [
         u('block', { part: 'abstract' }, copyNode(jats.abstract).children),
         ...body.children,
@@ -632,16 +671,20 @@ export const jatsConvertPlugin: Plugin<[Jats, Options?], Body, Body> = function 
     // Can do better than this in the future, but for now, just put them at the end!
     const floatsGroup = selectAll('floats-group', jats.tree) as GenericParent[];
     if (floatsGroup.length > 0) {
+      jatsFileWarn(file, 'Hoisted floats-group children into body', {
+        source: 'jats-convert',
+        note: `groups=${floatsGroup.length}`,
+      });
       floatsGroup.forEach((g) => {
         body.children.push(...g.children);
       });
     }
-    floatToEndTransform(body);
+    floatToEndTransform(body, file);
     backToBodyTransform(body, jats.back);
-    dataAvailabilityTransform(body);
+    dataAvailabilityTransform(body, file);
     const refLookup = processJatsReferences(body, jats.references, { ...opts, vfile: file });
     basicTransformations(body, file);
-    journalTransforms(jats.tree, body);
+    journalTransforms(jats.tree, body, file);
     const state = new JatsParser(file, jats, opts);
     state.renderChildren(body);
     while (state.stack.length > 1) state.closeNode();
@@ -650,7 +693,7 @@ export const jatsConvertPlugin: Plugin<[Jats, Options?], Body, Body> = function 
       opts.logInfo.unhandled = [...new Set(state.unhandled)];
     }
 
-    resolveJatsCitations(tree, refLookup);
+    resolveJatsCitations(tree, refLookup, file);
     inlineCitationsTransform(
       tree,
       jats.references
@@ -662,10 +705,10 @@ export const jatsConvertPlugin: Plugin<[Jats, Options?], Body, Body> = function 
     );
 
     const { frontmatter } = jats;
-    abbreviationSectionTransform(tree, frontmatter);
-    abbreviationFootnoteTransform(tree, frontmatter);
+    abbreviationSectionTransform(tree, frontmatter, file);
+    abbreviationFootnoteTransform(tree, frontmatter, file);
     abbreviationsFromTree(tree, frontmatter);
-    tableFootnotesToLegend(tree);
+    tableFootnotesToLegend(tree, file);
     const abstract = selectAll('block', tree).find((block) => {
       return block.data && (block.data as any).part === 'abstract';
     });
@@ -770,7 +813,7 @@ export async function jatsConvert(
   const dir = path.dirname(input);
   const vfile = new VFile();
   vfile.path = input;
-  const jats = new Jats(fs.readFileSync(input).toString());
+  const jats = new Jats(fs.readFileSync(input).toString(), { vfile, source: input });
   const pmidCache = await getPMIDLookup(jats.references, dir);
   const { tree, frontmatter } = jatsConvertTransform(jats, {
     vfile,

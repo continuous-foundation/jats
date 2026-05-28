@@ -1,6 +1,6 @@
 import type { Plugin } from 'unified';
 import type { GenericParent } from 'myst-common';
-import { RuleId, fileWarn } from 'myst-common';
+import { jatsFileWarn } from '../messages.js';
 import { select, selectAll } from 'unist-util-select';
 import { remove } from 'unist-util-remove';
 import { Tags } from 'jats-tags';
@@ -51,9 +51,9 @@ export function admonitionTransform(tree: GenericParent, file: VFile) {
   boxedTexts.forEach((boxedText) => {
     const found = findBoxedTextTitle(boxedText);
     if (!found) {
-      fileWarn(file, 'Encountered boxed-text without title', {
+      jatsFileWarn(file, 'Encountered boxed-text without title', {
+        source: 'jats-convert:admonitions',
         node: boxedText,
-        ruleId: RuleId.jatsParses,
       });
     } else {
       const { title, nodeToReplace } = found;
@@ -64,6 +64,9 @@ export function admonitionTransform(tree: GenericParent, file: VFile) {
   // Delete any remaining boxed-text caption nodes
   const noCaptions = selectAll(`${Tags.boxedText} > ${Tags.caption}`, tree) as GenericParent[];
   noCaptions.forEach((caption) => {
+    jatsFileWarn(file, 'Removed boxed-text caption after title extraction', {
+      source: 'jats-convert:admonitions',
+    });
     caption.type = '__delete__';
   });
   remove(tree, '__delete__');
