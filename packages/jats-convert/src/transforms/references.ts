@@ -9,7 +9,7 @@ import type { VFile } from 'vfile';
 import { select, selectAll } from 'unist-util-select';
 import { Session } from 'myst-cli-utils';
 import type { Options } from '../types.js';
-import { jatsFileError, jatsFileWarn } from '../messages.js';
+import { jatsFileWarn } from '../messages.js';
 import { toText } from '../utils.js';
 
 function cacheFolder(dir: string) {
@@ -292,7 +292,7 @@ function processRef(
   // return { refid: [{}, {}, {}, ...], citid: [{}], citid: [{}], ...}, [bibtex strings...], [footnote nodes...]
   // ref with unlabeled note and other cites — warn, still convert note to footnote
   if (ref.type !== 'ref') {
-    jatsFileError(file, 'Unexpected type for reference', {
+    jatsFileWarn(file, 'Unexpected type for reference', {
       source: 'jats-convert:references',
       note: `type=${ref.type}`,
     });
@@ -300,7 +300,7 @@ function processRef(
   }
   const { identifier } = normalizeLabel(ref.id) ?? {};
   if (!identifier) {
-    jatsFileError(file, 'Encountered ref without id', {
+    jatsFileWarn(file, 'Encountered ref without id', {
       source: 'jats-convert:references',
     });
     return EMPTY_REF;

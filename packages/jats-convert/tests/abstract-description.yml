@@ -4,7 +4,11 @@ cases:
   - title: sets description to first two sentences of abstract
     jats: |-
       <front>
-      <article-meta><pub-date pub-type="epub"><day>01</day><month>01</month><year>2020</year></pub-date></article-meta>
+      <article-meta>
+      <title-group><article-title>Test</article-title></title-group>
+      <contrib-group><contrib contrib-type="author"><name><surname>T</surname><given-names>A</given-names></name></contrib></contrib-group>
+      <pub-date pub-type="epub"><day>01</day><month>01</month><year>2020</year></pub-date>
+      </article-meta>
       <abstract><title>Abstract</title><p>First sentence here. Second sentence follows. Third sentence is extra.</p></abstract>
       </front>
       <body><p>Body.</p></body>
@@ -18,7 +22,11 @@ cases:
   - title: short abstract uses full text as description
     jats: |-
       <front>
-      <article-meta><pub-date pub-type="epub"><day>01</day><month>01</month><year>2020</year></pub-date></article-meta>
+      <article-meta>
+      <title-group><article-title>Test</article-title></title-group>
+      <contrib-group><contrib contrib-type="author"><name><surname>T</surname><given-names>A</given-names></name></contrib></contrib-group>
+      <pub-date pub-type="epub"><day>01</day><month>01</month><year>2020</year></pub-date>
+      </article-meta>
       <abstract><p>Only one sentence.</p></abstract>
       </front>
       <body><p>x</p></body>
@@ -32,7 +40,11 @@ cases:
   - title: two-sentence abstract uses full text as description
     jats: |-
       <front>
-      <article-meta><pub-date pub-type="epub"><day>01</day><month>01</month><year>2020</year></pub-date></article-meta>
+      <article-meta>
+      <title-group><article-title>Test</article-title></title-group>
+      <contrib-group><contrib contrib-type="author"><name><surname>T</surname><given-names>A</given-names></name></contrib></contrib-group>
+      <pub-date pub-type="epub"><day>01</day><month>01</month><year>2020</year></pub-date>
+      </article-meta>
       <abstract><title>Abstract</title><p>Alpha one. Beta two.</p></abstract>
       </front>
       <body><p>x</p></body>

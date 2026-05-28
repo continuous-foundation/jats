@@ -25,7 +25,7 @@ import {
 } from './transforms/references.js';
 import { backToBodyTransform, tableFootnotesToLegend } from './transforms/footnotes.js';
 import version from './version.js';
-import { jatsFileError, jatsFileWarn } from './messages.js';
+import { jatsFileWarn } from './messages.js';
 import {
   logMessagesFromVFile,
   toText,
@@ -609,10 +609,7 @@ export class JatsParser implements IJatsParser {
   }
 
   error(message: string, source?: string, opts?: MessageInfo) {
-    jatsFileError(this.file, message, {
-      ...opts,
-      source: source ? `jats-convert:${source}` : undefined,
-    });
+    this.warn(message, source, opts);
   }
 
   pushNode(el?: GenericNode) {

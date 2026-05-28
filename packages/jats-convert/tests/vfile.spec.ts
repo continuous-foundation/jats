@@ -14,6 +14,11 @@ ${DOCTYPE}
   <front>
     <article-meta>
       <title-group><article-title>Test</article-title></title-group>
+      <contrib-group>
+        <contrib contrib-type="author">
+          <name><surname>Test</surname><given-names>Author</given-names></name>
+        </contrib>
+      </contrib-group>
       <pub-date pub-type="epub"><day>01</day><month>01</month><year>2020</year></pub-date>
     </article-meta>
   </front>
@@ -24,10 +29,6 @@ ${DOCTYPE}
 
 function warnMessages(file: VFile) {
   return file.messages.filter((m) => m.fatal === false);
-}
-
-function errorMessages(file: VFile) {
-  return file.messages.filter((m) => m.fatal === true);
 }
 
 function hasPrologWarning(file: VFile) {
@@ -77,7 +78,7 @@ ${DOCTYPE}
     const vfile = new VFile();
     jatsConvertTransform(new Jats(xml), { vfile });
     expect(
-      errorMessages(vfile).some((m) => m.reason === 'No publication date found in JATS'),
+      warnMessages(vfile).some((m) => m.reason === 'No publication date found in JATS'),
     ).toBe(true);
   });
 
@@ -99,7 +100,7 @@ ${DOCTYPE}
     expect(messages.some((m) => m.note !== undefined)).toBe(true);
   });
 
-  test('reference errors are recorded on vfile without aborting convert', () => {
+  test('reference warnings are recorded on vfile without aborting convert', () => {
     const xml = minimalArticle(
       '<p><xref ref-type="bibr" rid="missing">[?]</xref></p>',
       `<ref-list>
@@ -121,7 +122,7 @@ ${DOCTYPE}
     const { tree } = jatsConvertTransform(new Jats(xml), { vfile, logInfo });
 
     expect(tree.type).toBe('root');
-    expect(errorMessages(vfile).some((m) => m.reason === 'Encountered ref without id')).toBe(
+    expect(warnMessages(vfile).some((m) => m.reason === 'Encountered ref without id')).toBe(
       true,
     );
     expect(
