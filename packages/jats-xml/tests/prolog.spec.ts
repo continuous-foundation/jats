@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { VFile } from 'vfile';
-import { Jats, flushJatsPrologWarnings } from '../src';
+import { Jats } from '../src';
 
 const MINIMAL_ARTICLE = `<article><front></front><body><p>x</p></body></article>`;
 
@@ -44,25 +44,11 @@ ${DOCTYPE}
     expect(vfile.messages.some((m) => m.reason?.includes('pmc-articleset'))).toBe(true);
   });
 
-  test('buffers prolog warnings when no vfile at parse time', () => {
+  test('omits prolog warnings when constructed without vfile', () => {
     const data = articleWithProlog('<?xml-stylesheet type="text/xsl" href="bits.xsl"?>');
-    const jats = new Jats(data);
-    expect(jats.prologWarnings?.length).toBeGreaterThan(0);
-    expect(jats.prologWarnings?.[0].reason).toContain('processing instruction');
-
+    new Jats(data);
     const vfile = new VFile();
     expect(vfile.messages).toHaveLength(0);
-    flushJatsPrologWarnings(jats, vfile);
-    expect(vfile.messages.length).toBeGreaterThan(0);
-    expect(jats.prologWarnings).toHaveLength(0);
-  });
-
-  test('flush does nothing when there are no buffered prolog warnings', () => {
-    const jats = new Jats(`${DOCTYPE}${MINIMAL_ARTICLE}`);
-    const vfile = new VFile();
-    flushJatsPrologWarnings(jats, vfile);
-    expect(vfile.messages).toHaveLength(0);
-    expect(jats.prologWarnings).toHaveLength(0);
   });
 });
 

@@ -6,7 +6,7 @@ import { VFile } from 'vfile';
 import { dump, load } from 'js-yaml';
 import type { MessageInfo, GenericNode, GenericParent } from 'myst-common';
 import { copyNode, normalizeLabel } from 'myst-common';
-import { flushJatsPrologWarnings, Jats } from 'jats-xml';
+import { Jats } from 'jats-xml';
 import { select, selectAll } from 'unist-util-select';
 import { u } from 'unist-builder';
 import type { Body, License, LinkMixin } from 'jats-tags';
@@ -677,7 +677,7 @@ export class JatsParser implements IJatsParser {
 
 export const jatsConvertPlugin: Plugin<[Jats, Options?], Body, Body> = function (jats, opts) {
   this.Compiler = (body: Body, file: VFile) => {
-    flushJatsPrologWarnings(jats, file);
+    jats.vfile ??= file;
     if (jats.abstract) {
       abstractTransform(jats.abstract, file);
       body.children = [
@@ -774,6 +774,7 @@ export function jatsConvertTransform(
     opts.logInfo.license = licenseString;
   }
   const file = opts?.vfile ?? new VFile();
+  jats.vfile ??= file;
   const pipe = unified().use(jatsConvertPlugin, jats, opts);
   pipe.stringify(copyNode(jats.body ?? { type: 'body', children: [] }) as Body, file);
   const { tree, frontmatter } = file.result as JatsResult;

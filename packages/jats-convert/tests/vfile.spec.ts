@@ -14,6 +14,7 @@ ${DOCTYPE}
   <front>
     <article-meta>
       <title-group><article-title>Test</article-title></title-group>
+      <pub-date pub-type="epub"><day>01</day><month>01</month><year>2020</year></pub-date>
     </article-meta>
   </front>
   <body>${bodyInner}</body>
@@ -56,19 +57,28 @@ ${DOCTYPE}
     expect(warnMessages(vfile).length).toBeGreaterThan(0);
   });
 
-  test('buffers prolog warnings on Jats then flushes during convert', () => {
+  test('omits prolog warnings when Jats was constructed without vfile', () => {
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 ${DOCTYPE}
 <?xml-stylesheet type="text/xsl" href="bits.xsl"?>
 <article><front></front><body><p>Hi</p></body></article>`;
 
     const jats = new Jats(xml);
-    expect(jats.prologWarnings?.length).toBeGreaterThan(0);
-
     const vfile = new VFile();
     jatsConvertTransform(jats, { vfile });
-    expect(hasPrologWarning(vfile)).toBe(true);
-    expect(jats.prologWarnings).toHaveLength(0);
+    expect(hasPrologWarning(vfile)).toBe(false);
+  });
+
+  test('records missing publication date on convert vfile', () => {
+    const xml = minimalArticle('<p>x</p>').replace(
+      '<pub-date pub-type="epub"><day>01</day><month>01</month><year>2020</year></pub-date>',
+      '',
+    );
+    const vfile = new VFile();
+    jatsConvertTransform(new Jats(xml), { vfile });
+    expect(
+      errorMessages(vfile).some((m) => m.reason === 'No publication date found in JATS'),
+    ).toBe(true);
   });
 
   test('copies vfile messages to logInfo.messages after convert', () => {

@@ -1,6 +1,6 @@
 export { default as version } from './version.js';
 export { Jats } from './jats.js';
-export { flushJatsPrologWarnings, type JatsPrologWarning } from './messages.js';
+export { recordJatsMessage } from './messages.js';
 export {
   knownXmlDefectRepairMessage,
   repairKnownXmlDefects,
