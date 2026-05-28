@@ -106,7 +106,7 @@ export class Jats {
   tree: GenericParent;
   source?: string;
   vfile?: VFile;
-  private dateMessagesRecorded = false;
+  private frontmatterMessagesRecorded = false;
 
   constructor(data: string, opts?: Options) {
     const toc = tic();
@@ -177,9 +177,14 @@ export class Jats {
     const title = this.articleTitle;
     const subtitle = this.articleSubtitle;
     const short_title = this.articleAltTitle;
-    const date = this.resolvePublicationDate();
-    const authors = this.articleAuthors?.map((auth) => {
-      return processContributor(auth);
+    const titleText = title ? toText(title).trim() : '';
+    const authors = (this.articleAuthors ?? []).map((auth) => processContributor(auth));
+    const { date, datePick } = this.resolvePublicationDate();
+    this.recordFrontmatterMessages({
+      date,
+      datePick,
+      titleText,
+      authorCount: authors.length,
     });
     const affiliations = this.articleAffiliations?.map((aff) => {
       return processAffiliation(aff);
@@ -218,7 +223,7 @@ export class Jats {
     const identifiers = pmc ? { pmcid: `PMC${pmc}` } : undefined;
     const frontmatter: PageFrontmatter = validatePageFrontmatter(
       {
-        title: title ? toText(title) : undefined,
+        title: titleText || undefined,
         subtitle: subtitle ? toText(subtitle) : undefined,
         short_title: short_title ? toText(short_title) : undefined,
         doi: this.doi ?? undefined,
@@ -282,11 +287,14 @@ export class Jats {
    * Prefer a fully-specified publication date (day/month/year).
    * If publication date is incomplete (e.g. year-only), fall back through history dates.
    */
-  private resolvePublicationDate(): string | undefined {
-    const pick = this.pickPublicationDate();
+  private resolvePublicationDate(): {
+    date?: string;
+    datePick?: { warn?: string; note?: string };
+  } {
+    const datePick = this.pickPublicationDate();
     let date: string | undefined;
-    if (pick) {
-      const d = toDate(pick.node);
+    if (datePick) {
+      const d = toDate(datePick.node);
       if (d) {
         const year = d.getUTCFullYear();
         const month = (d.getUTCMonth() + 1).toString().padStart(2, '0');
@@ -294,16 +302,36 @@ export class Jats {
         date = `${year}-${month}-${day}`;
       }
     }
-    if (!this.dateMessagesRecorded) {
-      this.dateMessagesRecorded = true;
-      if (pick?.warn) {
-        recordJatsMessage(this.vfile, pick.warn, { note: pick.note });
-      }
-      if (!date) {
-        recordJatsMessage(this.vfile, 'No publication date found in JATS', { fatal: true });
-      }
+    return { date, datePick };
+  }
+
+  private recordFrontmatterMessages(input: {
+    date?: string;
+    datePick?: { warn?: string; note?: string };
+    titleText: string;
+    authorCount: number;
+  }) {
+    if (this.frontmatterMessagesRecorded) return;
+    this.frontmatterMessagesRecorded = true;
+
+    if (input.datePick?.warn) {
+      recordJatsMessage(this.vfile, input.datePick.warn, { note: input.datePick.note });
     }
-    return date;
+    if (!input.date) {
+      recordJatsMessage(this.vfile, 'No publication date found in JATS', {
+        note: 'article-meta/pub-date or history/pub-history dates',
+      });
+    }
+    if (!input.titleText) {
+      recordJatsMessage(this.vfile, 'No article title found in JATS', {
+        note: 'article-meta/title-group/article-title',
+      });
+    }
+    if (input.authorCount === 0) {
+      recordJatsMessage(this.vfile, 'No authors found in JATS', {
+        note: 'article-meta/contrib-group/contrib[@contrib-type="author"]',
+      });
+    }
   }
 
   private pickPublicationDate(): { node: GenericParent; warn?: string; note?: string } | undefined {
