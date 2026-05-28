@@ -474,14 +474,15 @@ export async function resolveJatsCitations(
       });
       return;
     }
-    if (!refLookup[citeNode.identifier]) {
+    const resolved = refLookup[citeNode.identifier];
+    if (!resolved?.length) {
       jatsFileWarn(file, 'Unresolved bibliographic citation', {
         source: 'jats-convert:references',
         note: `identifier=${citeNode.identifier}`,
       });
       return;
     }
-    const children: GenericNode[] = refLookup[citeNode.identifier]
+    const children: GenericNode[] = resolved
       .filter(({ footnote }) => !!footnote)
       .map(({ footnote }) => {
         const { label, identifier } = normalizeLabel(footnote) ?? {};
@@ -491,7 +492,7 @@ export async function resolveJatsCitations(
           identifier,
         };
       });
-    const newCiteNodes = refLookup[citeNode.identifier]
+    const newCiteNodes = resolved
       .filter(({ cite }) => !!cite)
       .map(({ cite }) => {
         const { label, identifier } = normalizeLabel(cite) ?? {};

@@ -281,10 +281,16 @@ const handlers: Record<string, Handler> = {
   },
   graphic(node, state) {
     const link = node?.['xlink:href'];
+    if (!link) {
+      state.warn('Graphic has no xlink:href', 'graphic');
+    }
     state.addLeaf('image', { url: link });
   },
   ['inline-graphic'](node, state) {
     const link = node?.['xlink:href'];
+    if (!link) {
+      state.warn('Inline-graphic has no xlink:href', 'inline-graphic');
+    }
     state.addLeaf('image', { url: link });
   },
   fig(node, state) {
@@ -410,7 +416,15 @@ const handlers: Record<string, Handler> = {
     state.addLeaf('break');
   },
   ['named-content'](node, state) {
-    // TODO: Not just ignore things marked as named-content
+    const note = [
+      node['content-type'] ? `content-type=${node['content-type']}` : undefined,
+      node['specific-use'] ? `specific-use=${node['specific-use']}` : undefined,
+    ]
+      .filter(Boolean)
+      .join(' ');
+    state.warn('Rendered named-content as child content only', 'named-content', {
+      note: note || undefined,
+    });
     state.renderChildren(node);
   },
   ['fn-group'](node, state) {
@@ -424,6 +438,9 @@ const handlers: Record<string, Handler> = {
   },
   xref(node, state) {
     const refType: RefType = node['ref-type'];
+    if (!node.rid) {
+      state.warn('xref missing rid', 'xref', { note: `ref-type=${refType}` });
+    }
     const { label, identifier } = normalizeLabel(node.rid) ?? {};
     switch (refType) {
       case RefType.bibr:
@@ -702,6 +719,7 @@ export const jatsConvertPlugin: Plugin<[Jats, Options?], Body, Body> = function 
           return identifier;
         })
         .filter((id): id is string => !!id),
+      file,
     );
 
     const { frontmatter } = jats;
