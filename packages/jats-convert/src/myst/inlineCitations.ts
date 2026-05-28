@@ -208,8 +208,8 @@ export function inlineCitationsTransform(tree: GenericParent, referenceIds: stri
     allCitesToCiteGroups(tree);
     flattenNestedCiteGroups(tree);
     combineAdjacentCiteGroups(tree);
-    removeCiteSeparators(tree);
     expandHyphenatedCites(tree, referenceIds);
+    removeCiteSeparators(tree);
     removeCiteParentheses(tree);
     removeCiteSuperscript(tree);
     ensureSpaceBeforeCite(tree);
