@@ -34,6 +34,7 @@ import type { Logger } from 'myst-cli-utils';
 import { tic } from 'myst-cli-utils';
 import type { VFile } from 'vfile';
 import { type JatsPrologWarning, recordJatsPrologWarning } from './messages.js';
+import { sanitizeXmlEntities } from './sanitizeXmlEntities.js';
 import { articleMetaOrder, tableWrapOrder } from './order.js';
 import {
   serializeJatsXml,
@@ -110,8 +111,21 @@ export class Jats {
     const toc = tic();
     this.log = opts?.log;
     if (opts?.source) this.source = opts.source;
+    const vfile = opts?.vfile;
+    if (!vfile) this.prologWarnings = [];
+    const warnProlog = (reason: string, note?: string) => {
+      recordJatsPrologWarning(this.prologWarnings, vfile, reason, note);
+    };
+    const { xml: parseInput, escapedBareAmpersandCount } = sanitizeXmlEntities(data);
+    if (escapedBareAmpersandCount > 0) {
+      const note =
+        escapedBareAmpersandCount === 1
+          ? '1 bare & rewritten to &#38;'
+          : `${escapedBareAmpersandCount} bare & rewritten to &#38;`;
+      warnProlog('Escaped bare ampersand(s) before XML parse', note);
+    }
     try {
-      this.raw = xml2js(data, {
+      this.raw = xml2js(parseInput, {
         compact: false,
         // Preserve whitespace-only text nodes between elements. This is usually unnecessary except inside <preformat>.
         // convertToUnist drops these outside preformat so other content is processed independent of arbitrary xml whitespace.
@@ -122,11 +136,6 @@ export class Jats {
     }
     const { declaration, elements } = this.raw;
     this.declaration = declaration?.attributes;
-    const vfile = opts?.vfile;
-    if (!vfile) this.prologWarnings = [];
-    const warnProlog = (reason: string, note?: string) => {
-      recordJatsPrologWarning(this.prologWarnings, vfile, reason, note);
-    };
     const filteredElements = dropTopLevelInstructions(
       significantChildElements(elements),
       (instruction) => {
