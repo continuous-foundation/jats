@@ -4,7 +4,8 @@ import path from 'node:path';
 import { convertPMIDs2DOIs, normalizePMID } from 'jats-fetch';
 import type { Body, Reference } from 'jats-tags';
 import type { GenericNode, GenericParent } from 'myst-common';
-import { copyNode, liftChildren, normalizeLabel } from 'myst-common';
+import { copyNode, fileError, liftChildren, normalizeLabel, RuleId } from 'myst-common';
+import type { VFile } from 'vfile';
 import { select, selectAll } from 'unist-util-select';
 import { Session } from 'myst-cli-utils';
 import type { Options } from '../types.js';
@@ -249,11 +250,18 @@ function processRefCite(
  * compiles these into a lookup dictionary and lists of bibtex entries
  * and footnotes
  */
+const EMPTY_REF = {
+  refLookup: {} as Record<string, ProcessedReference[]>,
+  footnotes: [] as GenericNode[],
+  bibtexEntries: [] as string[],
+};
+
 function processRef(
   ref: GenericParent,
   pmidCache: Record<string, string | null>,
   fnCount: number,
   counts: Counts,
+  file?: VFile,
   dois?: boolean,
 ) {
   // if it's a ref and a citation with doi
@@ -272,11 +280,23 @@ function processRef(
   // return { refid: [{}, {}, {}, ...], citid: [{}], citid: [{}], ...}, [bibtex strings...], [footnote nodes...]
   // ref with unlabeled note and other cites - ignore note
   if (ref.type !== 'ref') {
-    throw new Error(`Unexpected type for reference: ${ref.type}`);
+    if (file) {
+      fileError(file, `Unexpected type for reference: ${ref.type}`, {
+        source: 'jats-convert:references',
+        ruleId: RuleId.jatsParses,
+      });
+    }
+    return EMPTY_REF;
   }
   const { identifier } = normalizeLabel(ref.id) ?? {};
   if (!identifier) {
-    throw new Error(`Encountered "ref" without id`);
+    if (file) {
+      fileError(file, 'Encountered "ref" without id', {
+        source: 'jats-convert:references',
+        ruleId: RuleId.jatsParses,
+      });
+    }
+    return EMPTY_REF;
   }
   const refLookup: Record<string, ProcessedReference[]> = { [identifier]: [] };
   const footnotes: GenericNode[] = [];
@@ -337,7 +357,7 @@ export function processJatsReferences(body: Body, references: Reference[], opts?
       refLookup: newRefLookup,
       footnotes: newFootnotes,
       bibtexEntries: newBibtexEntries,
-    } = processRef(ref, pmidCache, footnotes.length + 1, counts, opts?.dois);
+    } = processRef(ref, pmidCache, footnotes.length + 1, counts, opts?.vfile, opts?.dois);
     refLookup = { ...refLookup, ...newRefLookup };
     bibtexEntries.push(...newBibtexEntries);
     footnotes.push(...newFootnotes);

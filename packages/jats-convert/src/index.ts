@@ -25,7 +25,12 @@ import {
 } from './transforms/references.js';
 import { backToBodyTransform, tableFootnotesToLegend } from './transforms/footnotes.js';
 import version from './version.js';
-import { logMessagesFromVFile, toText, toTextPreserveWhitespace } from './utils.js';
+import {
+  logMessagesFromVFile,
+  toText,
+  toTextPreserveWhitespace,
+  vfileMessagesForLogInfo,
+} from './utils.js';
 import { inlineCitationsTransform } from './myst/inlineCitations.js';
 import {
   abbreviationFootnoteTransform,
@@ -634,7 +639,7 @@ export const jatsConvertPlugin: Plugin<[Jats, Options?], Body, Body> = function 
     floatToEndTransform(body);
     backToBodyTransform(body, jats.back);
     dataAvailabilityTransform(body);
-    const refLookup = processJatsReferences(body, jats.references, opts);
+    const refLookup = processJatsReferences(body, jats.references, { ...opts, vfile: file });
     basicTransformations(body, file);
     journalTransforms(jats.tree, body);
     const state = new JatsParser(file, jats, opts);
@@ -711,6 +716,9 @@ export function jatsConvertTransform(
   const pipe = unified().use(jatsConvertPlugin, jats, opts);
   pipe.stringify(copyNode(jats.body ?? { type: 'body', children: [] }) as Body, file);
   const { tree, frontmatter } = file.result as JatsResult;
+  if (opts?.logInfo && file.messages.length) {
+    opts.logInfo.messages = vfileMessagesForLogInfo(file);
+  }
   if (opts?.logInfo) {
     opts.logInfo.figures = {
       body: selectAll('fig', jats.body).length,
