@@ -666,7 +666,7 @@ export class JatsParser implements IJatsParser {
         handler(child, this, node);
       } else {
         this.unhandled.push(child.type);
-        this.error('Unhandled JATS conversion for node', undefined, { note: `type=${child.type}` });
+        this.error(`Unhandled JATS conversion for node: ${child.type}`);
       }
     });
   }
