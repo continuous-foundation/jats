@@ -4,6 +4,18 @@ import path from 'node:path';
 /** Default when a fragment is wrapped or a bare `<article>` needs a DOCTYPE line. */
 const DEFAULT_DOCTYPE = `<!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Archiving and Interchange DTD v1.0 20120330//EN" "JATS-archivearticle1.dtd">\n`;
 
+const DEFAULT_CONTRIB = `<contrib-group>
+  <contrib contrib-type="author">
+    <name><surname>Test</surname><given-names>Author</given-names></name>
+  </contrib>
+</contrib-group>`;
+
+const DEFAULT_ARTICLE_META = `<front><article-meta>
+  <title-group><article-title>Test</article-title></title-group>
+  ${DEFAULT_CONTRIB}
+  <pub-date pub-type="epub"><day>01</day><month>01</month><year>2020</year></pub-date>
+</article-meta></front>`;
+
 export type ResolvedJatsInput = {
   content: string;
   fromFile: boolean;
@@ -55,9 +67,10 @@ export function wrapJatsFragment(inner: string, jatsBack?: string): string {
     return `${DEFAULT_DOCTYPE}<article><body></body>${t}</article>`;
   }
   if (/<body[\s>]/i.test(t)) {
-    return `${DEFAULT_DOCTYPE}<article>${t}${back}</article>`;
+    const prefix = /<front[\s>]/i.test(t) ? '' : DEFAULT_ARTICLE_META;
+    return `${DEFAULT_DOCTYPE}<article>${prefix}${t}${back}</article>`;
   }
-  return `${DEFAULT_DOCTYPE}<article><body>${t}</body>${back}</article>`;
+  return `${DEFAULT_DOCTYPE}<article>${DEFAULT_ARTICLE_META}<body>${t}</body>${back}</article>`;
 }
 
 function validateJatsBack(

@@ -2,6 +2,8 @@ import { copyNode, liftChildren, normalizeLabel, type GenericParent } from 'myst
 import type { Cite, CiteGroup } from 'myst-spec-ext';
 import { remove } from 'unist-util-remove';
 import { selectAll } from 'unist-util-select';
+import type { VFile } from 'vfile';
+import { jatsFileWarn } from '../messages.js';
 
 /**
  * Remove cite node children
@@ -132,7 +134,7 @@ function removeCiteParentheses(tree: GenericParent) {
 /**
  * When citations are separated by a hyphen, expand to fill in all intermediate citations
  */
-function expandHyphenatedCites(tree: GenericParent, referenceList: string[]) {
+function expandHyphenatedCites(tree: GenericParent, referenceList: string[], file?: VFile) {
   const citeGroupParents = selectAll(
     ':has(> citeGroup + text + citeGroup)',
     tree,
@@ -151,7 +153,13 @@ function expandHyphenatedCites(tree: GenericParent, referenceList: string[]) {
       const lastCite = nextChild.children?.[0] as Cite;
       const firstInd = referenceList.indexOf(firstCite.label);
       const lastInd = referenceList.indexOf(lastCite.label);
-      if (firstInd === -1 || lastInd === -1 || lastInd <= firstInd) return;
+      if (firstInd === -1 || lastInd === -1 || lastInd <= firstInd) {
+        jatsFileWarn(file, 'Could not expand hyphenated citation range', {
+          source: 'jats-convert:inlineCitations',
+          note: `from=${firstCite.label ?? ''} to=${lastCite.label ?? ''}`.trim(),
+        });
+        return;
+      }
       const allCites = referenceList.slice(firstInd, lastInd + 1).map((citeLabel): Cite => {
         const { label, identifier } = normalizeLabel(citeLabel) ?? {};
         return { type: 'cite', kind: firstCite.kind, label: label ?? citeLabel, identifier };
@@ -198,7 +206,11 @@ function ensureSpaceBeforeCite(tree: GenericParent) {
   });
 }
 
-export function inlineCitationsTransform(tree: GenericParent, referenceIds: string[]) {
+export function inlineCitationsTransform(
+  tree: GenericParent,
+  referenceIds: string[],
+  file?: VFile,
+) {
   let before = '';
   let current = JSON.stringify(tree);
   // Keep running these transforms until the tree no longer changes
@@ -208,7 +220,7 @@ export function inlineCitationsTransform(tree: GenericParent, referenceIds: stri
     allCitesToCiteGroups(tree);
     flattenNestedCiteGroups(tree);
     combineAdjacentCiteGroups(tree);
-    expandHyphenatedCites(tree, referenceIds);
+    expandHyphenatedCites(tree, referenceIds, file);
     removeCiteSeparators(tree);
     removeCiteParentheses(tree);
     removeCiteSuperscript(tree);

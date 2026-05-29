@@ -32,6 +32,10 @@ import type {
 } from 'jats-tags';
 import type { Logger } from 'myst-cli-utils';
 import { tic } from 'myst-cli-utils';
+import type { VFile } from 'vfile';
+import { recordJatsMessage } from './messages.js';
+import { knownXmlDefectRepairMessage, repairKnownXmlDefects } from './repairKnownXmlDefects.js';
+import { sanitizeXmlEntities } from './sanitizeXmlEntities.js';
 import { articleMetaOrder, tableWrapOrder } from './order.js';
 import {
   serializeJatsXml,
@@ -41,7 +45,7 @@ import {
   toDate,
 } from 'jats-utils';
 
-type Options = { log?: Logger; source?: string };
+type Options = { log?: Logger; source?: string; vfile?: VFile };
 
 function select<T extends GenericNode>(selector: string, node?: GenericNode): T | undefined {
   try {
@@ -78,19 +82,20 @@ function significantChildElements(elements: Element[] | undefined): Element[] | 
 }
 
 /**
- * Drop a leading processing instruction when it precedes doctype and the root element.
+ * Drop top-level processing instructions (e.g. xml-stylesheet) from the prolog.
  * Malformed prologs such as <?version xml="1.0"?> are parsed this way by xml-js.
  */
-function dropLeadingPrologInstruction(elements: Element[] | undefined): Element[] | undefined {
-  if (
-    elements?.length === 3 &&
-    elements[0].type === 'instruction' &&
-    elements[1].type === 'doctype' &&
-    elements[2].type === 'element'
-  ) {
-    return elements.slice(1);
-  }
-  return elements;
+function dropTopLevelInstructions(
+  elements: Element[] | undefined,
+  onInstruction?: (instruction: Element) => void,
+): Element[] | undefined {
+  return elements?.filter((elem) => {
+    if (elem.type === 'instruction') {
+      onInstruction?.(elem);
+      return false;
+    }
+    return true;
+  });
 }
 
 export class Jats {
@@ -100,13 +105,33 @@ export class Jats {
   log?: Logger;
   tree: GenericParent;
   source?: string;
+  vfile?: VFile;
+  private frontmatterMessagesRecorded = false;
 
   constructor(data: string, opts?: Options) {
     const toc = tic();
     this.log = opts?.log;
     if (opts?.source) this.source = opts.source;
+    this.vfile = opts?.vfile;
+    const warnProlog = (reason: string, note?: string) => {
+      recordJatsMessage(this.vfile, reason, { note });
+    };
+    const { xml: afterDefectRepairs, applied: defectRepairs } = repairKnownXmlDefects(data);
+    defectRepairs.forEach(({ repair, count }) => {
+      const reason = knownXmlDefectRepairMessage(repair.from, repair.to);
+      const note = count === 1 ? undefined : `${count} occurrences`;
+      warnProlog(reason, note);
+    });
+    const { xml: parseInput, escapedBareAmpersandCount } = sanitizeXmlEntities(afterDefectRepairs);
+    if (escapedBareAmpersandCount > 0) {
+      const note =
+        escapedBareAmpersandCount === 1
+          ? '1 bare & rewritten to &#38;'
+          : `${escapedBareAmpersandCount} bare & rewritten to &#38;`;
+      warnProlog('Escaped bare ampersand(s) before XML parse', note);
+    }
     try {
-      this.raw = xml2js(data, {
+      this.raw = xml2js(parseInput, {
         compact: false,
         // Preserve whitespace-only text nodes between elements. This is usually unnecessary except inside <preformat>.
         // convertToUnist drops these outside preformat so other content is processed independent of arbitrary xml whitespace.
@@ -117,9 +142,17 @@ export class Jats {
     }
     const { declaration, elements } = this.raw;
     this.declaration = declaration?.attributes;
-    const filteredElements = dropLeadingPrologInstruction(significantChildElements(elements));
+    const filteredElements = dropTopLevelInstructions(
+      significantChildElements(elements),
+      (instruction) => {
+        const name = instruction.name ?? '(unnamed)';
+        const body = String(instruction.instruction ?? '').trim();
+        const note = body ? `name=${name} ${body}` : `name=${name}`;
+        warnProlog('Removed top-level XML processing instruction from prolog', note);
+      },
+    );
     if (filteredElements?.length && filteredElements[0].type !== 'doctype') {
-      this.log?.warn('JATS is missing DOCTYPE declaration');
+      warnProlog('JATS is missing DOCTYPE declaration; inserted empty doctype');
       filteredElements.unshift({ type: 'doctype' });
     }
     if (
@@ -132,6 +165,9 @@ export class Jats {
       throw new Error('JATS must be structured as <!DOCTYPE><article>...</article>');
     }
     this.doctype = filteredElements[0].doctype;
+    if (filteredElements[1].name === 'pmc-articleset') {
+      warnProlog('JATS root is pmc-articleset wrapper', 'Using nested article element');
+    }
     const converted = convertToUnist(filteredElements[1]);
     this.tree = select('article', converted) as GenericParent;
     this.log?.debug(toc('Parsed and converted JATS to unist tree in %s'));
@@ -141,25 +177,14 @@ export class Jats {
     const title = this.articleTitle;
     const subtitle = this.articleSubtitle;
     const short_title = this.articleAltTitle;
-    let date: string | undefined;
-    // Prefer a fully-specified publication date (day/month/year).
-    // If publication date is incomplete (e.g. year-only), fall back to history accepted date.
-    const preferredDateNode =
-      this.publicationDate ??
-      this.pubHistoryPubDate ??
-      this.pubHistoryAcceptedDate ??
-      this.historyAcceptedDate;
-    if (preferredDateNode) {
-      const d = toDate(preferredDateNode);
-      if (d) {
-        const year = d.getUTCFullYear();
-        const month = (d.getUTCMonth() + 1).toString().padStart(2, '0');
-        const day = d.getUTCDate().toString().padStart(2, '0');
-        date = `${year}-${month}-${day}`;
-      }
-    }
-    const authors = this.articleAuthors?.map((auth) => {
-      return processContributor(auth);
+    const titleText = title ? toText(title).trim() : '';
+    const authors = (this.articleAuthors ?? []).map((auth) => processContributor(auth));
+    const { date, datePick } = this.resolvePublicationDate();
+    this.recordFrontmatterMessages({
+      date,
+      datePick,
+      titleText,
+      authorCount: authors.length,
     });
     const affiliations = this.articleAffiliations?.map((aff) => {
       return processAffiliation(aff);
@@ -198,7 +223,7 @@ export class Jats {
     const identifiers = pmc ? { pmcid: `PMC${pmc}` } : undefined;
     const frontmatter: PageFrontmatter = validatePageFrontmatter(
       {
-        title: title ? toText(title) : undefined,
+        title: titleText || undefined,
         subtitle: subtitle ? toText(subtitle) : undefined,
         short_title: short_title ? toText(short_title) : undefined,
         doi: this.doi ?? undefined,
@@ -258,13 +283,146 @@ export class Jats {
     return selectAll('history date', this.articleMeta ?? this.front) as GenericParent[];
   }
 
-  get historyAcceptedDate(): GenericParent | undefined {
-    const accepted = this.historyDates.find((d) => {
-      const dt = String((d as any)['date-type'] ?? '').toLowerCase();
-      return dt === 'accepted' || dt === 'accept';
-    });
-    if (accepted && select(Tags.day, accepted)) return accepted;
+  /**
+   * Prefer a fully-specified publication date (day/month/year).
+   * If publication date is incomplete (e.g. year-only), fall back through history dates.
+   */
+  private resolvePublicationDate(): {
+    date?: string;
+    datePick?: { warn?: string; note?: string };
+  } {
+    const datePick = this.pickPublicationDate();
+    let date: string | undefined;
+    if (datePick) {
+      const d = toDate(datePick.node);
+      if (d) {
+        const year = d.getUTCFullYear();
+        const month = (d.getUTCMonth() + 1).toString().padStart(2, '0');
+        const day = d.getUTCDate().toString().padStart(2, '0');
+        date = `${year}-${month}-${day}`;
+      }
+    }
+    return { date, datePick };
+  }
+
+  private recordFrontmatterMessages(input: {
+    date?: string;
+    datePick?: { warn?: string; note?: string };
+    titleText: string;
+    authorCount: number;
+  }) {
+    if (this.frontmatterMessagesRecorded) return;
+    this.frontmatterMessagesRecorded = true;
+
+    if (input.datePick?.warn) {
+      recordJatsMessage(this.vfile, input.datePick.warn, { note: input.datePick.note });
+    }
+    if (!input.date) {
+      recordJatsMessage(this.vfile, 'No publication date found in JATS', {
+        note: 'article-meta/pub-date or history/pub-history dates',
+      });
+    }
+    if (!input.titleText) {
+      recordJatsMessage(this.vfile, 'No article title found in JATS', {
+        note: 'article-meta/title-group/article-title',
+      });
+    }
+    if (input.authorCount === 0) {
+      recordJatsMessage(this.vfile, 'No authors found in JATS', {
+        note: 'article-meta/contrib-group/contrib[@contrib-type="author"]',
+      });
+    }
+  }
+
+  private pickPublicationDate(): { node: GenericParent; warn?: string; note?: string } | undefined {
+    if (this.publicationDate) {
+      return { node: this.publicationDate };
+    }
+    if (this.pubHistoryPubDate) {
+      return { node: this.pubHistoryPubDate };
+    }
+    if (this.pubHistoryAcceptedDate) {
+      return { node: this.pubHistoryAcceptedDate };
+    }
+    if (this.historyAcceptedDate) {
+      return { node: this.historyAcceptedDate };
+    }
+    if (this.pubHistoryFallbackDate) {
+      return this.fallbackDatePick(this.pubHistoryFallbackDate, 'pub-history');
+    }
+    if (this.historyFallbackDate) {
+      return this.fallbackDatePick(this.historyFallbackDate, 'history');
+    }
     return undefined;
+  }
+
+  private static readonly PUB_HISTORY_PRIMARY_DATE_TYPES = new Set([
+    'pub',
+    'published',
+    'publication',
+    'accepted',
+    'accept',
+  ]);
+
+  private static readonly HISTORY_PRIMARY_DATE_TYPES = new Set(['accepted', 'accept']);
+
+  private jatsDateType(node: GenericParent): string {
+    return String((node as { 'date-type'?: string })['date-type'] ?? '')
+      .trim()
+      .toLowerCase();
+  }
+
+  private dateHasDay(node: GenericParent): boolean {
+    return !!select(Tags.day, node);
+  }
+
+  /** Last `<date>` with a `<day>` whose `date-type` is not in `excludeTypes`. */
+  private lastDateWithDay(
+    dates: GenericParent[],
+    excludeTypes: Set<string>,
+  ): GenericParent | undefined {
+    const eligible = dates.filter((d) => {
+      if (!this.dateHasDay(d)) return false;
+      return !excludeTypes.has(this.jatsDateType(d));
+    });
+    return eligible.at(-1);
+  }
+
+  private fallbackDatePick(
+    node: GenericParent,
+    source: 'pub-history' | 'history',
+  ): { node: GenericParent; warn: string; note: string } {
+    const dateType = this.jatsDateType(node) || 'unknown';
+    const xpath =
+      source === 'pub-history'
+        ? `article-meta/pub-history/event/date[@date-type="${dateType}"]`
+        : `article-meta/history/date[@date-type="${dateType}"]`;
+    return {
+      node,
+      warn: `Using JATS ${source} date as publication date`,
+      note: xpath,
+    };
+  }
+
+  private findHistoryDateByType(types: string[]): GenericParent | undefined {
+    const wanted = new Set(types.map((t) => t.toLowerCase()));
+    const found = this.historyDates.find((d) => {
+      return wanted.has(this.jatsDateType(d));
+    });
+    if (found && this.dateHasDay(found)) return found;
+    return undefined;
+  }
+
+  get historyAcceptedDate(): GenericParent | undefined {
+    return this.findHistoryDateByType(['accepted', 'accept']);
+  }
+
+  get pubHistoryFallbackDate(): GenericParent | undefined {
+    return this.lastDateWithDay(this.pubHistoryDates, Jats.PUB_HISTORY_PRIMARY_DATE_TYPES);
+  }
+
+  get historyFallbackDate(): GenericParent | undefined {
+    return this.lastDateWithDay(this.historyDates, Jats.HISTORY_PRIMARY_DATE_TYPES);
   }
 
   /**
@@ -277,11 +435,8 @@ export class Jats {
 
   private findPubHistoryDateByType(types: string[]): GenericParent | undefined {
     const wanted = new Set(types.map((t) => t.toLowerCase()));
-    const found = this.pubHistoryDates.find((d) => {
-      const dt = String((d as any)['date-type'] ?? '').toLowerCase();
-      return wanted.has(dt);
-    });
-    if (found && select(Tags.day, found)) return found;
+    const found = this.pubHistoryDates.find((d) => wanted.has(this.jatsDateType(d)));
+    if (found && this.dateHasDay(found)) return found;
     return undefined;
   }
 

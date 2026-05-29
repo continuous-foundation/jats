@@ -5,9 +5,11 @@ import { convertPMIDs2DOIs, normalizePMID } from 'jats-fetch';
 import type { Body, Reference } from 'jats-tags';
 import type { GenericNode, GenericParent } from 'myst-common';
 import { copyNode, liftChildren, normalizeLabel } from 'myst-common';
+import type { VFile } from 'vfile';
 import { select, selectAll } from 'unist-util-select';
 import { Session } from 'myst-cli-utils';
 import type { Options } from '../types.js';
+import { jatsFileWarn } from '../messages.js';
 import { toText } from '../utils.js';
 
 function cacheFolder(dir: string) {
@@ -67,7 +69,13 @@ type Counts = {
   lostRefItems: string[];
 };
 
-function bibtexFromCite(key: string, cite: GenericNode, counts: Counts, doi?: string) {
+function bibtexFromCite(
+  key: string,
+  cite: GenericNode,
+  counts: Counts,
+  file?: VFile,
+  doi?: string,
+) {
   let entryType = BIBTEX_TYPE[cite['publication-type']] ?? 'misc';
   if (select('part-title,chapter-title', cite)) {
     entryType = 'inbook';
@@ -163,8 +171,12 @@ function bibtexFromCite(key: string, cite: GenericNode, counts: Counts, doi?: st
         patentTitle = `${toText(child)}${patentTitle}`;
       }
     } else {
-      skipped.push(`${key}:${child.type} -> ${toText(child)}`);
-      // console.log(`skipped: ${child.type} @ ${key} - "${toText(child)}"`);
+      const detail = `${key}:${child.type} -> ${toText(child)}`;
+      skipped.push(detail);
+      jatsFileWarn(file, 'Skipped unsupported field in bibtex conversion', {
+        source: 'jats-convert:references',
+        note: detail,
+      });
     }
   });
   if (patentTitle && !bibtexLines.find((line) => line.startsWith('  title = ')))
@@ -203,6 +215,7 @@ function processRefCite(
   fallbackKey: string,
   pmidCache: Record<string, string | null>,
   counts: Counts,
+  file?: VFile,
   dois?: boolean,
 ): {
   citeId?: string;
@@ -238,7 +251,7 @@ function processRefCite(
     counts.dois += 1;
     return { citeId: identifier, ref: { cite: `https://doi.org/${doi}` } };
   }
-  const bibtex = bibtexFromCite(key, cite, counts, doi);
+  const bibtex = bibtexFromCite(key, cite, counts, file, doi);
   return { citeId: identifier, ref: { cite: key }, bibtex };
 }
 
@@ -249,11 +262,18 @@ function processRefCite(
  * compiles these into a lookup dictionary and lists of bibtex entries
  * and footnotes
  */
+const EMPTY_REF = {
+  refLookup: {} as Record<string, ProcessedReference[]>,
+  footnotes: [] as GenericNode[],
+  bibtexEntries: [] as string[],
+};
+
 function processRef(
   ref: GenericParent,
   pmidCache: Record<string, string | null>,
   fnCount: number,
   counts: Counts,
+  file?: VFile,
   dois?: boolean,
 ) {
   // if it's a ref and a citation with doi
@@ -270,37 +290,58 @@ function processRef(
   // return { citid: [{ cit key / fn key }] }, [bibtex string / footnote node]
   // if it's a ref with multiple note/cites
   // return { refid: [{}, {}, {}, ...], citid: [{}], citid: [{}], ...}, [bibtex strings...], [footnote nodes...]
-  // ref with unlabeled note and other cites - ignore note
+  // ref with unlabeled note and other cites — warn, still convert note to footnote
   if (ref.type !== 'ref') {
-    throw new Error(`Unexpected type for reference: ${ref.type}`);
+    jatsFileWarn(file, 'Unexpected type for reference', {
+      source: 'jats-convert:references',
+      note: `type=${ref.type}`,
+    });
+    return EMPTY_REF;
   }
   const { identifier } = normalizeLabel(ref.id) ?? {};
   if (!identifier) {
-    throw new Error(`Encountered "ref" without id`);
+    jatsFileWarn(file, 'Encountered ref without id', {
+      source: 'jats-convert:references',
+    });
+    return EMPTY_REF;
   }
   const refLookup: Record<string, ProcessedReference[]> = { [identifier]: [] };
   const footnotes: GenericNode[] = [];
   const bibtexEntries: string[] = [];
   ref.children?.forEach((child) => {
     if (['element-citation', 'mixed-citation', 'citation'].includes(child.type)) {
-      if (!toText(child)) return;
-      const cite = processRefCite(child, identifier, pmidCache, counts, dois);
+      if (!toText(child)) {
+        jatsFileWarn(file, 'Skipped empty citation in reference', {
+          source: 'jats-convert:references',
+          note: `ref-id=${identifier} type=${child.type}`,
+        });
+        return;
+      }
+      const cite = processRefCite(child, identifier, pmidCache, counts, file, dois);
       refLookup[identifier].push(cite.ref);
       if (cite.citeId) refLookup[cite.citeId] = [cite.ref];
       if (cite.bibtex) bibtexEntries.push(cite.bibtex);
     } else if (child.type === 'note') {
-      // Ignore notes unless they are the only child or labeled
-      // if (ref.children.length === 1 || child.children?.map((c) => c.type).includes('label')) {
+      const noteHasLabel = child.children?.some((c) => c.type === 'label');
+      const refHasCitations = ref.children?.some((c) =>
+        ['element-citation', 'mixed-citation', 'citation'].includes(c.type),
+      );
+      if ((ref.children?.length ?? 0) > 1 && !noteHasLabel && refHasCitations) {
+        jatsFileWarn(file, 'Reference has unlabeled note alongside citations', {
+          source: 'jats-convert:references',
+          note: `ref-id=${identifier}`,
+        });
+      }
       const fn = processRefNote(child, `${fnCount + footnotes.length}`);
       refLookup[identifier].push(fn.ref);
       if (fn.noteId) refLookup[fn.noteId] = [fn.ref];
       footnotes.push(fn.footnote);
-      // } else {
-      //   console.log(`ignoring reference note: "${toText(child)}"`);
-      // }
     } else if (child.type !== 'label') {
       counts.lostRefs.push(child.type);
-      // console.log(`unsupported reference item of type: ${child.type}`);
+      jatsFileWarn(file, 'Unsupported child in reference', {
+        source: 'jats-convert:references',
+        note: `ref-id=${identifier} type=${child.type}`,
+      });
     }
   });
   return { refLookup, footnotes, bibtexEntries };
@@ -337,7 +378,7 @@ export function processJatsReferences(body: Body, references: Reference[], opts?
       refLookup: newRefLookup,
       footnotes: newFootnotes,
       bibtexEntries: newBibtexEntries,
-    } = processRef(ref, pmidCache, footnotes.length + 1, counts, opts?.dois);
+    } = processRef(ref, pmidCache, footnotes.length + 1, counts, opts?.vfile, opts?.dois);
     refLookup = { ...refLookup, ...newRefLookup };
     bibtexEntries.push(...newBibtexEntries);
     footnotes.push(...newFootnotes);
@@ -423,11 +464,25 @@ function savePMIDCache(cache: Record<string, string | null>, dir: string) {
 export async function resolveJatsCitations(
   tree: GenericParent,
   refLookup: Record<string, ProcessedReference[]>,
+  file?: VFile,
 ) {
   const citeNodes = selectAll('cite', tree) as GenericNode[];
   citeNodes.forEach((citeNode) => {
-    if (!citeNode.identifier || !refLookup[citeNode.identifier]) return;
-    const children: GenericNode[] = refLookup[citeNode.identifier]
+    if (!citeNode.identifier) {
+      jatsFileWarn(file, 'Cite node missing identifier', {
+        source: 'jats-convert:references',
+      });
+      return;
+    }
+    const resolved = refLookup[citeNode.identifier];
+    if (!resolved?.length) {
+      jatsFileWarn(file, 'Unresolved bibliographic citation', {
+        source: 'jats-convert:references',
+        note: `identifier=${citeNode.identifier}`,
+      });
+      return;
+    }
+    const children: GenericNode[] = resolved
       .filter(({ footnote }) => !!footnote)
       .map(({ footnote }) => {
         const { label, identifier } = normalizeLabel(footnote) ?? {};
@@ -437,7 +492,7 @@ export async function resolveJatsCitations(
           identifier,
         };
       });
-    const newCiteNodes = refLookup[citeNode.identifier]
+    const newCiteNodes = resolved
       .filter(({ cite }) => !!cite)
       .map(({ cite }) => {
         const { label, identifier } = normalizeLabel(cite) ?? {};

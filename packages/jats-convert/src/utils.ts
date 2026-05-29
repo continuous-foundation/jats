@@ -33,6 +33,16 @@ export function copyNode(node: Node) {
   return mystCopyNode(node as any);
 }
 
+export function vfileMessagesForLogInfo(file: VFile) {
+  return file.messages.map((message) => ({
+    reason: message.reason,
+    note: message.note,
+    fatal: message.fatal,
+    source: message.source,
+    ruleId: (message as { ruleId?: string }).ruleId,
+  }));
+}
+
 export function logMessagesFromVFile(session: ISession, file?: VFile): void {
   if (!file) return;
   file.messages.forEach((message) => {

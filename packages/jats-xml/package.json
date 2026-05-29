@@ -39,6 +39,7 @@
   },
   "dependencies": {
     "adm-zip": "^0.5.10",
+    "character-entities": "^2.0.2",
     "doi-utils": "^2.0.6",
     "jats-tags": "^1.1.4",
     "jats-utils": "^1.1.4",
@@ -46,8 +47,9 @@
     "myst-common": "^1.7.5",
     "myst-frontmatter": "^1.7.5",
     "node-fetch": "^3.3.1",
-    "unist-util-select": "^4.0.0",
     "unist-util-remove": "4.0.0",
+    "unist-util-select": "^4.0.0",
+    "vfile": "^5.0.0",
     "which": "^3.0.1",
     "xml-js": "^1.6.11"
   },

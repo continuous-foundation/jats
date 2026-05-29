@@ -4,6 +4,7 @@ import { liftChildren, toText } from 'myst-common';
 import { blockNestingTransform } from 'myst-transforms';
 import { select, selectAll } from 'unist-util-select';
 import { remove } from 'unist-util-remove';
+import type { VFile } from 'vfile';
 
 const SECTION_TYPES = ['sec', 'ack', 'app'];
 
@@ -18,7 +19,12 @@ function liftApps(tree: GenericNode) {
   liftChildren(tree, '__lift__');
 }
 
-function recurseSections(tree: GenericNode, depth = 1, titleType?: 'heading' | 'strong'): void {
+function recurseSections(
+  tree: GenericNode,
+  file: VFile | undefined,
+  depth = 1,
+  titleType?: 'heading' | 'strong',
+): void {
   const sections = tree.children?.filter((n) => isSection(n));
   if (!sections || sections.length === 0) return;
   sections.forEach((sec) => {
@@ -43,7 +49,7 @@ function recurseSections(tree: GenericNode, depth = 1, titleType?: 'heading' | '
     if (sec.type === 'ack') sec.part = 'acknowledgments';
     if (sec.type === 'app') sec.part = 'appendix';
     sec.type = 'sec';
-    recurseSections(sec, depth + 1, titleType);
+    recurseSections(sec, file, depth + 1, titleType);
   });
 }
 
@@ -55,10 +61,16 @@ function recurseSections(tree: GenericNode, depth = 1, titleType?: 'heading' | '
  * - Give headings depth value based on nesting
  * - Flatten the sections
  */
-export function sectionTransform(tree: GenericParent, titleType?: 'heading' | 'strong') {
+export type SectionTransformOptions = {
+  file?: VFile;
+  titleType?: 'heading' | 'strong';
+};
+
+export function sectionTransform(tree: GenericParent, opts?: SectionTransformOptions) {
+  const { file, titleType } = opts ?? {};
   const workTree = isSection(tree) ? { type: 'root', children: [tree] } : tree;
   liftApps(workTree);
-  recurseSections(workTree, 1, titleType);
+  recurseSections(workTree, file, 1, titleType);
   remove(workTree, '__delete__');
   const topSections = workTree.children?.filter((n) => isSection(n));
   topSections?.forEach((sec) => {

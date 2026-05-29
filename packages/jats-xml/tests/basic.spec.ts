@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import fs from 'fs';
+import { VFile } from 'vfile';
 import type { GenericNode } from 'myst-common';
 import { toText } from 'myst-common';
 import { select } from 'unist-util-select';
@@ -213,6 +214,213 @@ describe('Basic JATS read', () => {
     const jats = new Jats(data);
     expect(jats.frontmatter.date).toEqual('2014-01-02');
   });
+
+  test('frontmatter date falls back to last other pub-history date with warning', async () => {
+    const data = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Publishing DTD v1.2 20190208//EN" "JATS-journalpublishing1.dtd">
+<article>
+  <front>
+    <article-meta>
+      <title-group><article-title>Example</article-title></title-group>
+      <pub-history>
+        <event>
+          <date date-type="received">
+            <day>28</day><month>7</month><year>2018</year>
+          </date>
+          <date date-type="rev-recd">
+            <day>04</day><month>8</month><year>2018</year>
+          </date>
+        </event>
+      </pub-history>
+    </article-meta>
+  </front>
+  <body />
+</article>`;
+    const vfile = new VFile();
+    const jats = new Jats(data, { vfile });
+    expect(jats.frontmatter.date).toEqual('2018-08-04');
+    expect(
+      vfile.messages.some(
+        (m) =>
+          m.fatal === false && m.reason === 'Using JATS pub-history date as publication date',
+      ),
+    ).toBe(true);
+    expect(
+      vfile.messages.some((m) => m.note?.includes('pub-history/event/date[@date-type="rev-recd"]')),
+    ).toBe(true);
+  });
+
+  test('frontmatter date falls back to last other history date with warning', async () => {
+    const data = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Publishing DTD v1.2 20190208//EN" "JATS-journalpublishing1.dtd">
+<article>
+  <front>
+    <article-meta>
+      <title-group><article-title>Example</article-title></title-group>
+      <history>
+        <date date-type="received">
+          <day>28</day><month>7</month><year>2018</year>
+        </date>
+        <date date-type="rev-recd">
+          <day>04</day><month>8</month><year>2018</year>
+        </date>
+      </history>
+    </article-meta>
+  </front>
+  <body />
+</article>`;
+    const vfile = new VFile();
+    const jats = new Jats(data, { vfile });
+    expect(jats.frontmatter.date).toEqual('2018-08-04');
+    expect(
+      vfile.messages.some(
+        (m) => m.fatal === false && m.reason === 'Using JATS history date as publication date',
+      ),
+    ).toBe(true);
+    expect(
+      vfile.messages.some((m) => m.note?.includes('history/date[@date-type="rev-recd"]')),
+    ).toBe(true);
+  });
+
+  test('frontmatter date prefers pub-history fallback over history fallback', async () => {
+    const data = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Publishing DTD v1.2 20190208//EN" "JATS-journalpublishing1.dtd">
+<article>
+  <front>
+    <article-meta>
+      <title-group><article-title>Example</article-title></title-group>
+      <pub-history>
+        <event>
+          <date date-type="received">
+            <day>01</day><month>6</month><year>2019</year>
+          </date>
+        </event>
+      </pub-history>
+      <history>
+        <date date-type="received">
+          <day>28</day><month>7</month><year>2018</year>
+        </date>
+      </history>
+    </article-meta>
+  </front>
+  <body />
+</article>`;
+    const vfile = new VFile();
+    const jats = new Jats(data, { vfile });
+    expect(jats.frontmatter.date).toEqual('2019-06-01');
+    expect(
+      vfile.messages.some((m) => m.note?.includes('pub-history/event/date[@date-type="received"]')),
+    ).toBe(true);
+  });
+
+  test('frontmatter date falls back to sole history date when rev-recd is absent', async () => {
+    const data = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Publishing DTD v1.2 20190208//EN" "JATS-journalpublishing1.dtd">
+<article>
+  <front>
+    <article-meta>
+      <title-group><article-title>Example</article-title></title-group>
+      <history>
+        <date date-type="received">
+          <day>28</day><month>7</month><year>2018</year>
+        </date>
+      </history>
+    </article-meta>
+  </front>
+  <body />
+</article>`;
+    const vfile = new VFile();
+    const jats = new Jats(data, { vfile });
+    expect(jats.frontmatter.date).toEqual('2018-07-28');
+    expect(
+      vfile.messages.some(
+        (m) => m.fatal === false && m.reason === 'Using JATS history date as publication date',
+      ),
+    ).toBe(true);
+  });
+
+  test('frontmatter date records error when no date is available', async () => {
+    const data = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Publishing DTD v1.2 20190208//EN" "JATS-journalpublishing1.dtd">
+<article>
+  <front>
+    <article-meta>
+      <title-group><article-title>Example</article-title></title-group>
+    </article-meta>
+  </front>
+  <body />
+</article>`;
+    const vfile = new VFile();
+    const jats = new Jats(data, { vfile });
+    expect(jats.frontmatter.date).toBeUndefined();
+    expect(
+      vfile.messages.some(
+        (m) => m.fatal === false && m.reason === 'No publication date found in JATS',
+      ),
+    ).toBe(true);
+  });
+
+  test('frontmatter records error when article title is missing', async () => {
+    const data = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Publishing DTD v1.2 20190208//EN" "JATS-journalpublishing1.dtd">
+<article>
+  <front>
+    <article-meta>
+      <contrib-group>
+        <contrib contrib-type="author">
+          <name><surname>Smith</surname><given-names>Jane</given-names></name>
+        </contrib>
+      </contrib-group>
+      <pub-date pub-type="epub"><day>01</day><month>01</month><year>2020</year></pub-date>
+    </article-meta>
+  </front>
+  <body />
+</article>`;
+    const vfile = new VFile();
+    const jats = new Jats(data, { vfile });
+    expect(jats.frontmatter.title).toBeUndefined();
+    expect(
+      vfile.messages.some(
+        (m) => m.fatal === false && m.reason === 'No article title found in JATS',
+      ),
+    ).toBe(true);
+  });
+
+  test('frontmatter records error when there are no authors', async () => {
+    const data = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Publishing DTD v1.2 20190208//EN" "JATS-journalpublishing1.dtd">
+<article>
+  <front>
+    <article-meta>
+      <title-group><article-title>Example</article-title></title-group>
+      <pub-date pub-type="epub"><day>01</day><month>01</month><year>2020</year></pub-date>
+    </article-meta>
+  </front>
+  <body />
+</article>`;
+    const vfile = new VFile();
+    const jats = new Jats(data, { vfile });
+    expect(jats.frontmatter.authors).toBeUndefined();
+    expect(
+      vfile.messages.some((m) => m.fatal === false && m.reason === 'No authors found in JATS'),
+    ).toBe(true);
+  });
+
+  test('frontmatter date error is omitted without vfile', async () => {
+    const data = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Publishing DTD v1.2 20190208//EN" "JATS-journalpublishing1.dtd">
+<article>
+  <front>
+    <article-meta>
+      <title-group><article-title>Example</article-title></title-group>
+    </article-meta>
+  </front>
+  <body />
+</article>`;
+    const jats = new Jats(data);
+    expect(jats.frontmatter.date).toBeUndefined();
+    expect(jats.vfile).toBeUndefined();
+  });
 });
 
 describe('JATS XML attributes', () => {
@@ -232,6 +440,15 @@ describe('JATS XML prolog', () => {
   test('drops leading instruction before doctype and article', () => {
     const data = `<?version xml="1.0" encoding="UTF-8"?>
 <!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Archiving and Interchange DTD v1.2d1 20170631//EN" "JATS-archivearticle1.dtd">
+<article><front></front></article>`;
+    const jats = new Jats(data);
+    expect(jats.tree.type).toBe('article');
+  });
+
+  test('drops xml-stylesheet instruction between doctype and article', () => {
+    const data = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Archiving and Interchange DTD v1.2d1 20170631//EN" "JATS-archivearticle1.dtd">
+<?xml-stylesheet type="text/xsl" href="D:\\Tool\\View_head\\bits.xsl"?>
 <article><front></front></article>`;
     const jats = new Jats(data);
     expect(jats.tree.type).toBe('article');
