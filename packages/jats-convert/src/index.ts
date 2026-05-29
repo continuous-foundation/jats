@@ -296,7 +296,13 @@ const handlers: Record<string, Handler> = {
   fig(node, state) {
     const caption = select('caption', node) as GenericNode;
     const graphic = select('graphic,media', node) as GenericNode;
-    const title = select('title', node) as GenericNode;
+    const directTitle = node.children?.find((child) => child.type === 'title') as
+      | GenericNode
+      | undefined;
+    const captionTitle = caption
+      ? (select('title', caption) as GenericNode | undefined)
+      : undefined;
+    const title = directTitle ?? captionTitle;
     const { label, identifier } = normalizeLabel(node.id) ?? {};
     state.openNode('container', { label, identifier, kind: 'figure' });
     const wasInContainer = state.data.isInContainer;
@@ -315,8 +321,10 @@ const handlers: Record<string, Handler> = {
       state.openNode('strong');
       state.renderChildren(title);
       state.closeNode();
+      if (captionTitle && title === captionTitle) {
+        captionTitle.type = '__ignore__';
+      }
     }
-    // caption number?
     if (caption) {
       state.renderChildren(caption);
     }
@@ -400,14 +408,32 @@ const handlers: Record<string, Handler> = {
         note: types ? `children=${types}` : undefined,
       });
     } else {
-      const dropped = node.children
-        ?.filter((child) => child !== choice)
-        .map((child) => child.type)
-        .join(', ');
-      if (dropped) {
-        state.warn('Using first supported alternative only', 'alternatives', {
-          note: `chosen=${choice.type} dropped=${dropped}`,
-        });
+      const others = node.children?.filter((child) => child !== choice) ?? [];
+      if (others.length > 0) {
+        const skippedSupported = [
+          ...new Set(
+            others.filter((child) => !!state.handlers[child.type]).map((child) => child.type),
+          ),
+        ];
+        const skippedUnsupported = [
+          ...new Set(
+            others.filter((child) => !state.handlers[child.type]).map((child) => child.type),
+          ),
+        ];
+        let reason = 'Skipped other alternatives';
+        if (skippedSupported.length && !skippedUnsupported.length) {
+          reason = 'Skipped other supported alternatives';
+        } else if (skippedUnsupported.length && !skippedSupported.length) {
+          reason = 'Skipped unsupported alternatives';
+        }
+        const note = [
+          `used=${choice.type}`,
+          skippedSupported.length ? `other-supported=${skippedSupported.join(', ')}` : undefined,
+          skippedUnsupported.length ? `unsupported=${skippedUnsupported.join(', ')}` : undefined,
+        ]
+          .filter(Boolean)
+          .join('; ');
+        state.warn(reason, 'alternatives', { note });
       }
       state.handlers[choice.type](choice, state, node);
     }
@@ -695,7 +721,7 @@ export const jatsConvertPlugin: Plugin<[Jats, Options?], Body, Body> = function 
     }
     floatToEndTransform(body, file);
     backToBodyTransform(body, jats.back);
-    dataAvailabilityTransform(body, file);
+    dataAvailabilityTransform(body);
     const refLookup = processJatsReferences(body, jats.references, { ...opts, vfile: file });
     basicTransformations(body, file);
     journalTransforms(jats.tree, body, file);

@@ -22,9 +22,6 @@ export function abstractTransform(tree: GenericParent, file?: VFile) {
   if (title?.type !== 'title') return;
   const nextNode = tree.children[1] as GenericParent | undefined;
   if (toText(title).toUpperCase().trim() === 'ABSTRACT') {
-    jatsFileWarn(file, 'Removed redundant Abstract title from abstract section', {
-      source: 'jats-convert:abstract',
-    });
     title.type = '__delete__';
   } else if (nextNode?.type === 'p') {
     jatsFileWarn(file, 'Merged abstract title into first paragraph', {

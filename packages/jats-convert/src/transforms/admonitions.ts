@@ -64,9 +64,6 @@ export function admonitionTransform(tree: GenericParent, file: VFile) {
   // Delete any remaining boxed-text caption nodes
   const noCaptions = selectAll(`${Tags.boxedText} > ${Tags.caption}`, tree) as GenericParent[];
   noCaptions.forEach((caption) => {
-    jatsFileWarn(file, 'Removed boxed-text caption after title extraction', {
-      source: 'jats-convert:admonitions',
-    });
     caption.type = '__delete__';
   });
   remove(tree, '__delete__');

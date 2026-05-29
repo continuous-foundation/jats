@@ -5,7 +5,6 @@ import { blockNestingTransform } from 'myst-transforms';
 import { select, selectAll } from 'unist-util-select';
 import { remove } from 'unist-util-remove';
 import type { VFile } from 'vfile';
-import { jatsFileWarn } from '../messages.js';
 
 const SECTION_TYPES = ['sec', 'ack', 'app'];
 
@@ -37,10 +36,6 @@ function recurseSections(
     }
     if (firstChild?.type === 'title') {
       if (sec.type === 'ack' && toText(firstChild).toLowerCase().startsWith('ack')) {
-        jatsFileWarn(file, 'Removed redundant acknowledgments section title', {
-          source: 'jats-convert:sections',
-          note: `title=${toText(firstChild)}`,
-        });
         firstChild.type = '__delete__';
       } else if (titleType === 'strong') {
         firstChild.type = 'p';
