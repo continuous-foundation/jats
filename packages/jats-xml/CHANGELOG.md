@@ -1,5 +1,18 @@
 # jats-xml
 
+## 1.1.5
+
+### Patch Changes
+
+- 00387d1: Handle all top-level instruction nodes in jats
+- 00387d1: Add known defect replacement
+- 00387d1: Preprocessing for ampersands
+- 00387d1: Expand date selection
+- 00387d1: Many more fileWarn/fileError messages
+- 00387d1: Handle affiliation with no children
+  - jats-tags@1.1.5
+  - jats-utils@1.1.5
+
 ## 1.1.4
 
 ### Patch Changes

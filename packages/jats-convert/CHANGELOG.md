@@ -1,5 +1,23 @@
 # jats-convert
 
+## 1.1.5
+
+### Patch Changes
+
+- 00387d1: Log error rather than throw on unknown ref
+- 2d27da0: Add inline citation transformation to pick up [13,25-30]
+- 00387d1: Expand date selection
+- 00387d1: Many more fileWarn/fileError messages
+- Updated dependencies [00387d1]
+- Updated dependencies [00387d1]
+- Updated dependencies [00387d1]
+- Updated dependencies [00387d1]
+- Updated dependencies [00387d1]
+- Updated dependencies [00387d1]
+  - jats-xml@1.1.5
+  - jats-tags@1.1.5
+  - jats-fetch@1.1.5
+
 ## 1.1.4
 
 ### Patch Changes
