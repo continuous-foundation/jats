@@ -6,6 +6,8 @@
 
 Types and utilities for working with JATS XML documents in Node and Typescript.
 
+This monorepo uses [Bun](https://bun.sh) for installs and scripts (`bun install`, `bun run build`, `bun run test`). Published CLIs still target the Node.js runtime.
+
 Read and write JATS XML from node or see summaries from the command line.
 
 To use from the command line, use the `-g` to create a global install, which will provide a `jats` CLI:

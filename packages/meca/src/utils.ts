@@ -12,13 +12,7 @@ export function createTempFolder() {
 
 export function removeTempFolder(tempFolder?: string) {
   if (tempFolder && fs.existsSync(tempFolder)) {
-    if (fs.rmSync) {
-      // Node >= 14.14
-      fs.rmSync(tempFolder, { recursive: true });
-    } else {
-      // Node < 14.14
-      fs.rmdirSync(tempFolder, { recursive: true });
-    }
+    fs.rmSync(tempFolder, { recursive: true });
   }
 }
 

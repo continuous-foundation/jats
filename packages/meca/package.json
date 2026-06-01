@@ -29,16 +29,16 @@
     "copy:dtd": "cp ./static/manifest-1.0.dtd dist/manifest-1.0.dtd; cp ./static/transfer-1.0.dtd dist/transfer-1.0.dtd",
     "copy:version": "echo \"const version = '\"$npm_package_version\"';\nexport default version;\" > src/version.ts",
     "clean": "rm -rf dist",
-    "unlink": "npm uninstall -g meca;",
-    "link": "npm run unlink; npm link;",
-    "dev": "npm run copy:version && npm run link && esbuild src/cli/index.ts --bundle --outfile=dist/meca.cjs --platform=node --watch && npm run copy:dtd",
-    "test": "npm run copy:version && vitest run",
-    "test:watch": "npm run copy:version && vitest watch",
+    "unlink": "bun unlink -g meca || true",
+    "link": "bun run unlink && bun link",
+    "dev": "bun run copy:version && bun run link && esbuild src/cli/index.ts --bundle --outfile=dist/meca.cjs --platform=node --watch && bun run copy:dtd",
+    "test": "bun run copy:version && bun test",
+    "test:watch": "bun run copy:version && bun test --watch",
     "lint": "eslint \"src/**/*.ts*\" -c ./.eslintrc.cjs",
     "lint:format": "prettier --check \"src/**/*.{ts,tsx,md}\"",
     "build:esm": "tsc",
     "build:cli": "esbuild src/cli/index.ts --bundle --outfile=dist/meca.cjs --platform=node",
-    "build": "npm-run-all -l clean copy:version -p build:esm build:cli -s copy:dtd"
+    "build": "bun run clean && bun run copy:version && (bun run build:esm & bun run build:cli & wait) && bun run copy:dtd"
   },
   "bugs": {
     "url": "https://github.com/continuous-foundation/jats/issues"

@@ -18,23 +18,25 @@ jobs:
         with:
           fetch-depth: 2
           submodules: recursive
-      - name: Setup Node.js environment
-        uses: actions/setup-node@v3
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.18
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: 'npm'
+          registry-url: https://registry.npmjs.org
       - name: Install and test
         run: |
           sudo apt-get update
           sudo apt-get install -y libxml2-utils
-          npm install
-          npm run test
+          bun install --frozen-lockfile
+          bun run test
       - name: Version bump and create pull request OR publish to npm
         id: changesets
         uses: changesets/action@v1
         with:
-          version: npm run version
-          publish: npm run publish
+          version: bun run version
+          publish: bun run publish
           commit: 🚀 Release
           title: 🚀 Release
           createGithubReleases: false

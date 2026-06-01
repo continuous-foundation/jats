@@ -1,0 +1,4 @@
+[install]
+# Hoist dependencies to the root node_modules so ESLint and other tools can
+# resolve plugins from workspace packages (matches npm's layout).
+linker = "hoisted"
