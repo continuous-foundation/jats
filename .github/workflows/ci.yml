@@ -39,10 +39,12 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun run build
       - run: bun run link
+      # Examples of using the jats CLI
       - run: jats validate packages/jats-xml/tests/elifeExample.xml
       - run: jats test packages/jats-xml/tests/elifeExample.xml --cases packages/jats-xml/tests/elife.yml
       - run: jats validate packages/jats-xml/tests/plosExample.xml
       - run: jats test packages/jats-xml/tests/plosExample.xml --cases packages/jats-xml/tests/plos.yml
+      # Examples of using the meca CLI
       - run: meca validate packages/meca/tests/example.zip
 
   test:
