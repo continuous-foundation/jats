@@ -27,12 +27,12 @@
   "scripts": {
     "copy:version": "echo \"const version = '\"$npm_package_version\"';\nexport default version;\" > src/version.ts",
     "clean": "rm -rf dist",
-    "test": "npm run copy:version && vitest run",
-    "test:watch": "npm run copy:version && vitest watch",
+    "test": "bun run copy:version && bun test",
+    "test:watch": "bun run copy:version && bun test --watch",
     "lint": "eslint \"src/**/*.ts*\" -c ./.eslintrc.cjs",
     "lint:format": "prettier --check \"src/**/*.{ts,tsx,md}\"",
     "build:esm": "tsc",
-    "build": "npm-run-all -l clean copy:version -p build:esm"
+    "build": "bun run clean && bun run copy:version && bun run build:esm"
   },
   "bugs": {
     "url": "https://github.com/continuous-foundation/jats/issues"
@@ -46,6 +46,7 @@
     "myst-cli-utils": "^2.0.11",
     "myst-common": "^1.7.5",
     "myst-frontmatter": "^1.7.5",
+    "myst-spec": "^0.0.5",
     "node-fetch": "^3.3.1",
     "unist-util-remove": "4.0.0",
     "unist-util-select": "^4.0.0",
