@@ -39,19 +39,18 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun run build
       - run: bun run link
-      # CLIs are bundled for Node; run via node explicitly.
-      - run: node packages/jats-cli/dist/jats.cjs validate packages/jats-xml/tests/elifeExample.xml
-      - run: node packages/jats-cli/dist/jats.cjs test packages/jats-xml/tests/elifeExample.xml --cases packages/jats-xml/tests/elife.yml
-      - run: node packages/jats-cli/dist/jats.cjs validate packages/jats-xml/tests/plosExample.xml
-      - run: node packages/jats-cli/dist/jats.cjs test packages/jats-xml/tests/plosExample.xml --cases packages/jats-xml/tests/plos.yml
-      - run: node packages/meca/dist/meca.cjs validate packages/meca/tests/example.zip
+      - run: jats validate packages/jats-xml/tests/elifeExample.xml
+      - run: jats test packages/jats-xml/tests/elifeExample.xml --cases packages/jats-xml/tests/elife.yml
+      - run: jats validate packages/jats-xml/tests/plosExample.xml
+      - run: jats test packages/jats-xml/tests/plosExample.xml --cases packages/jats-xml/tests/plos.yml
+      - run: meca validate packages/meca/tests/example.zip
 
   test:
     if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node: ['18', '20', '22']
+        node: ["18", "20", "22"]
     name: Testing on Node ${{ matrix.node }}
     steps:
       - uses: actions/checkout@v4
