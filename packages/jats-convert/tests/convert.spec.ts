@@ -25,6 +25,27 @@ import { jatsConvertTransform } from '../src';
 import { prepareJatsXmlForConvert } from './helpers/wrapJatsSnippet';
 import { treeContainsPartial } from './helpers/mdastPartial';
 
+// Import each fixture as text so it joins the module graph and `bun test --watch`
+// re-runs when a `.yml` changes (runtime `fs.readFileSync` is invisible to the watcher).
+// Keep this map in sync with the directory — the guard below fails loudly otherwise.
+import abstractDescriptionYml from './abstract-description.yml' with { type: 'text' };
+import basicYml from './basic.yml' with { type: 'text' };
+import boxedtextYml from './boxedtext.yml' with { type: 'text' };
+import imagesYml from './images.yml' with { type: 'text' };
+import mathYml from './math.yml' with { type: 'text' };
+import preformatYml from './preformat.yml' with { type: 'text' };
+import referencesYml from './references.yml' with { type: 'text' };
+
+const YAML_FIXTURES: Record<string, string> = {
+  'abstract-description.yml': abstractDescriptionYml,
+  'basic.yml': basicYml,
+  'boxedtext.yml': boxedtextYml,
+  'images.yml': imagesYml,
+  'math.yml': mathYml,
+  'preformat.yml': preformatYml,
+  'references.yml': referencesYml,
+};
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 type ConvertYamlCase = {
@@ -42,25 +63,27 @@ type ConvertYamlFile = {
   cases: ConvertYamlCase[];
 };
 
-function listYamlFiles(testsDir: string): string[] {
-  return fs
+/** Ensure every `.yml` on disk is statically imported above (so the watcher tracks it). */
+function assertFixturesInSync(testsDir: string): void {
+  const onDisk = fs
     .readdirSync(testsDir)
     .filter((name) => name.endsWith('.yml'))
-    .filter((name) => fs.statSync(path.join(testsDir, name)).isFile())
-    .sort();
+    .filter((name) => fs.statSync(path.join(testsDir, name)).isFile());
+  const missing = onDisk.filter((name) => !(name in YAML_FIXTURES));
+  if (missing.length > 0) {
+    throw new Error(
+      `Add these .yml fixtures to YAML_FIXTURES in convert.spec.ts (needed for --watch): ${missing.join(', ')}`,
+    );
+  }
 }
 
 describe('JATS → mdast (YAML fixtures)', () => {
   const testsDir = __dirname;
-  const yamlFiles = listYamlFiles(testsDir);
-
-  if (yamlFiles.length === 0) {
-    throw new Error(`No .yml files found in ${testsDir}`);
-  }
+  assertFixturesInSync(testsDir);
+  const yamlFiles = Object.keys(YAML_FIXTURES).sort();
 
   for (const file of yamlFiles) {
-    const filePath = path.join(testsDir, file);
-    const doc = yaml.load(fs.readFileSync(filePath, 'utf8')) as ConvertYamlFile;
+    const doc = yaml.load(YAML_FIXTURES[file]) as ConvertYamlFile;
     const cases = doc.cases ?? [];
 
     describe(file, () => {
