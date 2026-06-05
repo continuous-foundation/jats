@@ -1,0 +1,126 @@
+cases:
+  - source: Current_Content/December_2019/9696df64-6c18-1014-955a-f93441f10db3
+    title: inline-formula inline-graphic becomes inlineMath with image child
+    jats: |-
+      <p>
+        Info about features <inline-formula><alternatives><inline-graphic xlink:href="711317v3_inline6.gif"/></alternatives></inline-formula>
+        is shared <inline-formula><alternatives><inline-graphic xlink:href="711317v3_inline7.gif"/></alternatives></inline-formula>,
+        forming <inline-formula><alternatives><inline-graphic xlink:href="711317v3_inline8.gif"/></alternatives></inline-formula> basis.
+      </p>
+    mdast:
+      type: paragraph
+      children:
+        - type: inlineMath
+          children:
+            - type: image
+              url: 711317v3_inline6.gif
+        - type: inlineMath
+          children:
+            - type: image
+              url: 711317v3_inline7.gif
+        - type: inlineMath
+          children:
+            - type: image
+              url: 711317v3_inline8.gif
+  - source: 10.1101/2021.05.11.443571
+    title: inline-formula image-only equation stays inline math (biorxiv TReX)
+    jats: |-
+      <p>We also refer to the imputed expression as <inline-formula><alternatives><inline-graphic xlink:href="443571v2_inline1.gif"/></alternatives></inline-formula>.</p>
+    mdast:
+      type: paragraph
+      children:
+        - type: text
+          value: 'We also refer to the imputed expression as '
+        - type: inlineMath
+          value: ''
+          children:
+            - type: image
+              url: 443571v2_inline1.gif
+        - type: text
+          value: .
+  - source: inline-formula-tex
+    title: inline-formula with tex-math becomes inlineMath value
+    jats: |-
+      <p>The value <inline-formula><tex-math><![CDATA[x^2 + y^2]]></tex-math></inline-formula> is positive.</p>
+    mdast:
+      type: paragraph
+      children:
+        - type: inlineMath
+          value: x^2 + y^2
+  - source: inline-formula-alternatives-tex
+    title: inline-formula alternatives prefers tex-math over graphic and MathML
+    jats: |-
+      <p><inline-formula>
+        <alternatives>
+          <inline-graphic xlink:href="graphic/eq_001.png"/>
+          <mml:math>
+            <mml:mrow>
+              <mml:msup>
+                <mml:mi>L</mml:mi>
+                <mml:mi>p</mml:mi>
+              </mml:msup>
+              <mml:mspace width="0.166667em"/>
+              <mml:mrow>
+                <mml:mo>(</mml:mo>
+                <mml:mn>1</mml:mn>
+                <mml:mo>&lt;</mml:mo>
+                <mml:mi>p</mml:mi>
+                <mml:mo>&lt;</mml:mo>
+                <mml:mi>&#x221E;</mml:mi>
+                <mml:mo>)</mml:mo>
+              </mml:mrow>
+            </mml:mrow>
+          </mml:math>
+          <tex-math><![CDATA[L^p\,(1<p<\infty )]]></tex-math>
+        </alternatives>
+      </inline-formula></p>
+    mdast:
+      type: inlineMath
+      value: 'L^p\,(1<p<\infty )'
+  - source: inline-formula-mml
+    title: inline-formula alternatives converts MathML to TeX when there is no tex-math
+    jats: |-
+      <p><inline-formula>
+        <alternatives>
+          <inline-graphic xlink:href="graphic/eq_001.png"/>
+          <mml:math>
+            <mml:mrow>
+              <mml:msup>
+                <mml:mi>L</mml:mi>
+                <mml:mi>p</mml:mi>
+              </mml:msup>
+              <mml:mspace width="0.166667em"/>
+              <mml:mrow>
+                <mml:mo>(</mml:mo>
+                <mml:mn>1</mml:mn>
+                <mml:mo>&lt;</mml:mo>
+                <mml:mi>p</mml:mi>
+                <mml:mo>&lt;</mml:mo>
+                <mml:mi>&#x221E;</mml:mi>
+                <mml:mo>)</mml:mo>
+              </mml:mrow>
+            </mml:mrow>
+          </mml:math>
+        </alternatives>
+      </inline-formula></p>
+    mdast:
+      type: inlineMath
+      value: 'L^{p} \left(\right. 1 < p < \infty \left.\right)'
+  - source: disp-formula-graphic
+    title: disp-formula graphic-only equation stays block math with image child
+    jats: |-
+      <disp-formula id="eqn1"><alternatives><graphic xlink:href="disp_eqn1.gif"/></alternatives></disp-formula>
+    mdast:
+      type: math
+      identifier: eqn1
+      children:
+        - type: image
+          url: disp_eqn1.gif
+  - source: disp-formula-tex
+    title: disp-formula with tex-math becomes math value
+    jats: |-
+      <disp-formula id="eqn2"><tex-math><![CDATA[E = mc^2]]></tex-math></disp-formula>
+    mdast:
+      type: math
+      identifier: eqn2
+      value: E = mc^2

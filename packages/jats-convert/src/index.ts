@@ -12,9 +12,8 @@ import { u } from 'unist-builder';
 import type { Body, License, LinkMixin } from 'jats-tags';
 import { RefType } from 'jats-tags';
 import type { ISession } from 'jats-xml';
-import { MathMLToLaTeX } from 'mathml-to-latex';
-import { js2xml } from 'xml-js';
 import type { Handler, IJatsParser, JatsResult, Options, StateData } from './types.js';
+import { mathHandlers } from './math.js';
 import { basicTransformations, journalTransforms } from './transforms/index.js';
 import type { ProjectFrontmatter } from 'myst-frontmatter';
 import { abstractTransform, descriptionFromAbstract } from './transforms/abstract.js';
@@ -69,38 +68,6 @@ function refTypeToReferenceKind(kind?: RefType): string | undefined {
     case RefType.custom:
       return undefined;
   }
-}
-
-function texMathFromNode(node: GenericNode) {
-  const texMath = select('tex-math', node) as GenericNode;
-  if (texMath && texMath.children?.[0].cdata) {
-    return texMath.children?.[0].cdata;
-  }
-  selectAll('*', node).forEach((n: any) => {
-    if (n.type.startsWith('mml:')) {
-      n.type = n.type.substring(4);
-    }
-  });
-  const math = select('math', node) as GenericNode;
-  if (!math) return;
-  [math, ...selectAll('math *', node)].forEach((n: any) => {
-    const { type, value, children, ...attributes } = n;
-    if (type === 'text') {
-      n.type = 'text';
-      n.text = value;
-      delete n.value;
-    } else {
-      n.type = 'element';
-      n.name = type;
-      n.elements = children;
-      n.attributes = attributes;
-      delete n.children;
-      Object.keys(attributes).forEach((k) => {
-        delete n[k];
-      });
-    }
-  });
-  return MathMLToLaTeX.convert(js2xml({ type: 'element', name: 'root', elements: [math] }));
 }
 
 type Attributes = Record<string, any>;
@@ -158,46 +125,8 @@ const handlers: Record<string, Handler> = {
   ['list-item'](node, state) {
     state.renderInline(node, 'listItem');
   },
-  ['inline-formula'](node, state) {
-    const texMath = texMathFromNode(node);
-    if (texMath) {
-      const { label, identifier } = normalizeLabel(node.id) ?? {};
-      state.addLeaf('inlineMath', {
-        value: texMath,
-        label,
-        identifier,
-      });
-    } else {
-      state.warn('Reduced inline-formula without TeX or MathML to child nodes', 'inline-formula', {
-        note: node.id ? `id=${node.id}` : undefined,
-      });
-      state.renderChildren(node);
-    }
-  },
-  ['disp-formula'](node, state) {
-    const texMath = texMathFromNode(node);
-    const { label, identifier } = normalizeLabel(node.id) ?? {};
-    if (texMath) {
-      state.addLeaf('math', {
-        value: texMath,
-        label,
-        identifier,
-      });
-    } else {
-      state.warn('Converted disp-formula without TeX or MathML to paragraph', 'disp-formula', {
-        note: node.id ? `id=${node.id}` : undefined,
-      });
-      if (node.id) {
-        state.openNode('div', { label, identifier });
-      }
-      state.openNode('paragraph');
-      state.renderChildren(node);
-      state.closeNode();
-      if (node.id) {
-        state.closeNode();
-      }
-    }
-  },
+  // `inline-formula` / `disp-formula` math handlers live in `./math.js`.
+  ...mathHandlers,
   bold(node, state) {
     state.renderInline(node, 'strong');
   },
