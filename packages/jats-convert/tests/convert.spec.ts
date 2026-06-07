@@ -20,6 +20,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import yaml from 'js-yaml';
 import { Jats } from 'jats-xml';
+import { VFile } from 'vfile';
 import type { Options } from '../src/types';
 import { jatsConvertTransform } from '../src';
 import { prepareJatsXmlForConvert } from './helpers/wrapJatsSnippet';
@@ -37,12 +38,14 @@ import mathYml from './math.yml' with { type: 'text' };
 import preformatYml from './preformat.yml' with { type: 'text' };
 import referencesYml from './references.yml' with { type: 'text' };
 import tablesYml from './tables.yml' with { type: 'text' };
+import enumeratorsYml from './enumerators.yml' with { type: 'text' };
 
 const YAML_FIXTURES: Record<string, string> = {
   'abstract-description.yml': abstractDescriptionYml,
   'basic.yml': basicYml,
   'boxedtext.yml': boxedtextYml,
   'figures.yml': figuresYml,
+  'enumerators.yml': enumeratorsYml,
   'images.yml': imagesYml,
   'math.yml': mathYml,
   'preformat.yml': preformatYml,
@@ -60,6 +63,8 @@ type ConvertYamlCase = {
   mdast: unknown;
   frontmatter?: Record<string, unknown>;
   expect_no_description?: boolean;
+  expect_warn_contains?: string[];
+  expect_no_warn_contains?: string[];
   opts?: Options;
 };
 
@@ -93,7 +98,9 @@ describe('JATS → mdast (YAML fixtures)', () => {
     describe(file, () => {
       test.each(cases.map((c): [string, ConvertYamlCase] => [c.title, c]))('%s', (_, c) => {
         const xml = prepareJatsXmlForConvert(testsDir, c.jats, c.jats_back, c.title);
-        const { tree, frontmatter } = jatsConvertTransform(new Jats(xml), c.opts);
+        const vfile = c.opts?.vfile ?? new VFile();
+        const opts = { ...c.opts, vfile };
+        const { tree, frontmatter } = jatsConvertTransform(new Jats(xml), opts);
         expect(
           treeContainsPartial(tree, c.mdast),
           [
@@ -109,6 +116,28 @@ describe('JATS → mdast (YAML fixtures)', () => {
         }
         if (c.expect_no_description) {
           expect(frontmatter.description).toBeUndefined();
+        }
+        if (c.expect_warn_contains?.length) {
+          const reasons = vfile.messages
+            .filter((m) => m.fatal === false)
+            .map((m) => m.reason ?? '');
+          for (const fragment of c.expect_warn_contains) {
+            expect(
+              reasons.some((r) => r.includes(fragment)),
+              `Expected warning containing "${fragment}"; got: ${reasons.join(' | ') || '(none)'}`,
+            ).toBe(true);
+          }
+        }
+        if (c.expect_no_warn_contains?.length) {
+          const reasons = vfile.messages
+            .filter((m) => m.fatal === false)
+            .map((m) => m.reason ?? '');
+          for (const fragment of c.expect_no_warn_contains) {
+            expect(
+              reasons.some((r) => r.includes(fragment)),
+              `Expected no warning containing "${fragment}"; got: ${reasons.join(' | ') || '(none)'}`,
+            ).toBe(false);
+          }
         }
       });
     });

@@ -1,0 +1,202 @@
+cases:
+  - source: fig-id-and-label-match
+    title: figure id and label yield matching enumerator
+    jats: |-
+      <fig id="figs1" position="float">
+        <label>Figure S1</label>
+        <caption><p>Supplementary figure.</p></caption>
+        <graphic xlink:href="fig-s1.png"/>
+      </fig>
+    mdast:
+      type: container
+      kind: figure
+      identifier: figs1
+      enumerator: S1
+
+  - source: fig-id-only
+    title: figure id alone yields enumerator when label is absent
+    jats: |-
+      <fig id="fig2" position="float">
+        <caption><p>Second figure.</p></caption>
+        <graphic xlink:href="fig2.png"/>
+      </fig>
+    mdast:
+      type: container
+      kind: figure
+      identifier: fig2
+      enumerator: '2'
+
+  - source: fig-label-only
+    title: figure label alone yields enumerator when id is absent
+    jats: |-
+      <fig position="float">
+        <label>Fig. 3</label>
+        <caption><p>Third figure.</p></caption>
+        <graphic xlink:href="fig3.png"/>
+      </fig>
+    mdast:
+      type: container
+      kind: figure
+      enumerator: '3'
+
+  - source: fig-label-fig-prefix
+    title: figure label with Fig prefix is normalized to caps
+    jats: |-
+      <fig id="fig4a" position="float">
+        <label>Fig 4A</label>
+        <caption><p>Panel figure.</p></caption>
+        <graphic xlink:href="fig4a.png"/>
+      </fig>
+    mdast:
+      type: container
+      kind: figure
+      enumerator: 4A
+
+  - source: fig-label-trailing-period
+    title: trailing punctuation on label is stripped from enumerator
+    jats: |-
+      <fig id="fig1" position="float">
+        <label>Figure 1.</label>
+        <caption><p>Main figure.</p></caption>
+        <graphic xlink:href="fig1.png"/>
+      </fig>
+    mdast:
+      type: container
+      kind: figure
+      enumerator: '1'
+
+  - source: table-wrap-id-and-label
+    title: table id and label yield matching enumerator
+    jats: |-
+      <table-wrap id="tbl2">
+        <label>Table 2</label>
+        <table>
+          <tbody><tr><td>cell</td></tr></tbody>
+        </table>
+      </table-wrap>
+    mdast:
+      type: container
+      kind: table
+      identifier: tbl2
+      enumerator: '2'
+
+  - source: table-wrap-label-table-prefix
+    title: table label with Table prefix is normalized
+    jats: |-
+      <table-wrap id="table1">
+        <label>Table 1.</label>
+        <table>
+          <tbody><tr><td>cell</td></tr></tbody>
+        </table>
+      </table-wrap>
+    mdast:
+      type: container
+      kind: table
+      enumerator: '1'
+
+  - source: fig-id-label-mismatch
+    title: mismatched id and label prefer label enumerator and warn
+    jats: |-
+      <fig id="fig1" position="float">
+        <label>Figure 2</label>
+        <caption><p>Mismatched labels.</p></caption>
+        <graphic xlink:href="fig.png"/>
+      </fig>
+    mdast:
+      type: container
+      kind: figure
+      enumerator: '2'
+    expect_warn_contains:
+      - Container id and label enumerators do not match
+
+  - source: fig-mixed-enumeration
+    title: mix of enumerated and non-enumerated figures warns once
+    jats: |-
+      <fig id="fig1" position="float">
+        <label>Figure 1</label>
+        <caption><p>Enumerated figure.</p></caption>
+        <graphic xlink:href="fig1.png"/>
+      </fig>
+      <fig id="pclm.0000068.g001" position="float">
+        <caption><p>Non-standard id, no label.</p></caption>
+        <graphic xlink:href="fig2.png"/>
+      </fig>
+    mdast:
+      type: container
+      kind: figure
+      enumerator: '1'
+    expect_warn_contains:
+      - Mix of enumerated and non-enumerated figures
+
+  - source: fig-all-enumerated
+    title: all figures enumerated does not warn about mixed enumeration
+    jats: |-
+      <fig id="fig1" position="float">
+        <label>Figure 1</label>
+        <caption><p>First.</p></caption>
+        <graphic xlink:href="fig1.png"/>
+      </fig>
+      <fig id="fig2" position="float">
+        <label>Figure 2</label>
+        <caption><p>Second.</p></caption>
+        <graphic xlink:href="fig2.png"/>
+      </fig>
+    mdast:
+      type: container
+      kind: figure
+      enumerator: '2'
+    expect_no_warn_contains:
+      - Mix of enumerated and non-enumerated figures
+
+  - source: fig-none-enumerated
+    title: no figure enumerators does not warn about mixed enumeration
+    jats: |-
+      <fig id="pclm.0000068.g001" position="float">
+        <caption><p>First.</p></caption>
+        <graphic xlink:href="fig1.png"/>
+      </fig>
+      <fig id="pclm.0000068.g002" position="float">
+        <caption><p>Second.</p></caption>
+        <graphic xlink:href="fig2.png"/>
+      </fig>
+    mdast:
+      type: container
+      kind: figure
+    expect_no_warn_contains:
+      - Mix of enumerated and non-enumerated figures
+
+  - source: table-mixed-enumeration
+    title: mix of enumerated and non-enumerated tables warns once
+    jats: |-
+      <table-wrap id="tbl1">
+        <label>Table 1</label>
+        <table><tbody><tr><td>a</td></tr></tbody></table>
+      </table-wrap>
+      <table-wrap id="custom-table-id">
+        <table><tbody><tr><td>b</td></tr></tbody></table>
+      </table-wrap>
+    mdast:
+      type: container
+      kind: table
+      enumerator: '1'
+    expect_warn_contains:
+      - Mix of enumerated and non-enumerated tables
+
+  - source: figures-enumerated-tables-not
+    title: all figures enumerated and all tables non-enumerated is fine
+    jats: |-
+      <fig id="fig1" position="float">
+        <label>Figure 1</label>
+        <caption><p>Figure.</p></caption>
+        <graphic xlink:href="fig1.png"/>
+      </fig>
+      <table-wrap id="custom-table-id">
+        <table><tbody><tr><td>cell</td></tr></tbody></table>
+      </table-wrap>
+    mdast:
+      type: container
+      kind: figure
+      enumerator: '1'
+    expect_no_warn_contains:
+      - Mix of enumerated and non-enumerated figures
+      - Mix of enumerated and non-enumerated tables

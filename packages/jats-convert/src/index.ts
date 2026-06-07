@@ -39,6 +39,7 @@ import {
 import { floatToEndTransform } from './transforms/supplementary.js';
 import { dataAvailabilityTransform } from './transforms/parts.js';
 import { abbreviationsFromTree } from './myst/abbreviations.js';
+import { resolveEnumerator, warnMixedContainerEnumerators } from './enumerator.js';
 
 const MEDIA_FIGURE_EXTENSIONS = [
   '.png',
@@ -225,6 +226,7 @@ const handlers: Record<string, Handler> = {
   fig(node, state) {
     const caption = select('caption', node) as GenericNode;
     const graphic = select('graphic,media', node) as GenericNode;
+    const labelNode = select('label', node) as GenericNode | undefined;
     const directTitle = node.children?.find((child) => child.type === 'title') as
       | GenericNode
       | undefined;
@@ -233,7 +235,14 @@ const handlers: Record<string, Handler> = {
       : undefined;
     const title = directTitle ?? captionTitle;
     const { label, identifier } = normalizeLabel(node.id) ?? {};
-    state.openNode('container', { label, identifier, kind: 'figure' });
+    const enumerator = resolveEnumerator({
+      id: node.id,
+      labelText: labelNode ? toText(labelNode) : undefined,
+      kind: 'figure',
+      source: 'fig',
+      file: state.file,
+    });
+    state.openNode('container', { label, identifier, kind: 'figure', enumerator });
     const wasInContainer = state.data.isInContainer;
     state.data.isInContainer = true;
     const link = graphic?.['xlink:href'];
@@ -268,7 +277,14 @@ const handlers: Record<string, Handler> = {
     const labelNode = select('label', node) as GenericNode | undefined;
     const titleNode = select('title', node) as GenericNode | undefined;
     const { label, identifier } = normalizeLabel(node.id) ?? {};
-    state.openNode('container', { label, identifier, kind: 'table' });
+    const enumerator = resolveEnumerator({
+      id: node.id,
+      labelText: labelNode ? toText(labelNode) : undefined,
+      kind: 'table',
+      source: 'table-wrap',
+      file: state.file,
+    });
+    state.openNode('container', { label, identifier, kind: 'table', enumerator });
     const wasInContainer = state.data.isInContainer;
     state.data.isInContainer = true;
     state.openNode('caption');
@@ -456,7 +472,15 @@ const handlers: Record<string, Handler> = {
     }
     if (url && MEDIA_FIGURE_EXTENSIONS.find((ext) => url.endsWith(ext))) {
       const title = select('title', media) as GenericNode | undefined;
-      state.openNode('container', { label, identifier, kind: 'figure' });
+      const labelElement = select('label', node) as GenericNode | undefined;
+      const enumerator = resolveEnumerator({
+        id: node.id,
+        labelText: labelElement ? toText(labelElement) : undefined,
+        kind: 'figure',
+        source: 'supplementary-material',
+        file: state.file,
+      });
+      state.openNode('container', { label, identifier, kind: 'figure', enumerator });
       const wasInContainer = state.data.isInContainer;
       state.data.isInContainer = true;
       state.addLeaf('image', { url });
@@ -686,6 +710,7 @@ export const jatsConvertPlugin: Plugin<[Jats, Options?], Body, Body> = function 
     abbreviationFootnoteTransform(tree, frontmatter, file);
     abbreviationsFromTree(tree, frontmatter);
     tableFootnotesToLegend(tree, file);
+    warnMixedContainerEnumerators(tree, file);
     const abstract = selectAll('block', tree).find((block) => {
       return block.data && (block.data as any).part === 'abstract';
     });
