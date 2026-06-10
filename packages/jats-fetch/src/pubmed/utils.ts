@@ -5,7 +5,7 @@ const EFETCH_URL = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi';
 export function normalizePMID(session: ISession, pmid: string) {
   if (pmid.startsWith('https://')) {
     const idPart = new URL(pmid).pathname.slice(1);
-    session.log.debug(`Extract ${pmid} to ${idPart}`);
+    session.log.debug(`Attempting PMID conversion - simplifying URL ${pmid} to ${idPart}`);
     return idPart;
   }
   return pmid;
