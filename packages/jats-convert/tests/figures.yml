@@ -1,0 +1,61 @@
+# Figure (<fig>) conversion cases. Loaded by convert.spec.ts with all tests/*.yml.
+
+cases:
+  - source: bioRxiv 10.1101/2025.10.22.684031v1 fig2
+    title: fig with label, titled caption, formatted paragraph and xref converts to figure container
+    jats: |-
+      <fig id="fig2" position="float" orientation="portrait" fig-type="figure">
+      <label>Figure 2.</label>
+      <caption><title>Mutation enrichment in the gp120-selected N49P7-FR dbSMS library variants</title>
+      <p><bold>A)</bold> N49P7-FR initial VH library with fixed wild-type VL, <bold>B)</bold> VL library with fixed initially optimized VH, <bold>C)</bold> and subsequent VH library (VHv1) with fixed optimized VL were screened to identify the mutations enhancing the Fab affinity to six gp120s. <italic>Upper part of each panel:</italic> total variant count frequency per amino acid position in the gp120-selected dbSMS library normalized to total variant count frequency at the same amino acid position in the unselected (control) population expressed as count frequency fold-change. <italic>Lower part of each panel:</italic> heat map showing median amino acid enrichment (in log scale) across all variable region positions in the dbSMS library selected with six gp120s. Amino acids enhancing the gp120 interaction (red), diminishing it (blue), having a neutral effect (black), wild-type (white), and not sampled in the library (gray) are indicated. Amino acid positions are numbered according to the Kabat scheme. A threshold for the most significantly enriched mutations (&#x2265;0.5) was established based on the distribution of mutation enrichment values in the gp120-selected populations compared to the unselected control population (<xref rid="figs7" ref-type="fig">Supplementary Fig. 7</xref>).</p></caption>
+      <graphic xlink:href="684031v1_fig2.tif"/>
+      </fig>
+    mdast:
+      type: container
+      kind: figure
+      label: fig2
+      identifier: fig2
+      children:
+        - type: image
+          url: 684031v1_fig2.tif
+        - type: caption
+          children:
+            - type: paragraph
+              children:
+                - type: strong
+                  children:
+                    - type: text
+                      value: Mutation enrichment in the gp120-selected N49P7-FR dbSMS library variants
+            - type: paragraph
+              children:
+                - type: strong
+                  children:
+                    - type: text
+                      value: A)
+                - type: text
+                  value: ' N49P7-FR initial VH library with fixed wild-type VL, '
+                - type: strong
+                  children:
+                    - type: text
+                      value: B)
+                - type: text
+                  value: ' VL library with fixed initially optimized VH, '
+                - type: strong
+                  children:
+                    - type: text
+                      value: C)
+                - type: emphasis
+                  children:
+                    - type: text
+                      value: 'Upper part of each panel:'
+                - type: emphasis
+                  children:
+                    - type: text
+                      value: 'Lower part of each panel:'
+                - type: crossReference
+                  kind: figure
+                  label: figs7
+                  identifier: figs7
+                  children:
+                    - type: text
+                      value: Supplementary Fig. 7

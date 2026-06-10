@@ -247,8 +247,10 @@ const handlers: Record<string, Handler> = {
     }
     state.openNode('caption');
     if (title) {
+      state.openNode('paragraph');
       state.openNode('strong');
       state.renderChildren(title);
+      state.closeNode();
       state.closeNode();
       if (captionTitle && title === captionTitle) {
         captionTitle.type = '__ignore__';
@@ -271,8 +273,10 @@ const handlers: Record<string, Handler> = {
     state.data.isInContainer = true;
     state.openNode('caption');
     if (titleNode) {
+      state.openNode('paragraph');
       state.openNode('strong');
       state.renderChildren(titleNode);
+      state.closeNode();
       state.closeNode();
       titleNode.type = '__ignore__';
     }
@@ -459,9 +463,12 @@ const handlers: Record<string, Handler> = {
       state.openNode('caption');
       state.openNode('link', { url });
       if (title) {
+        state.openNode('paragraph');
         state.openNode('strong');
         state.renderChildren(title);
         state.closeNode();
+        state.closeNode();
+        title.type = '__ignore__';
       }
       if (caption) {
         state.renderChildren(caption);

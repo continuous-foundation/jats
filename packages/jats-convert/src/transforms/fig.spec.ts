@@ -41,8 +41,10 @@ ${DOCTYPE}
     expect(container).toBeDefined();
     const caption = select('caption', container);
     expect(caption).toBeDefined();
-    expect(select('strong', caption)).toBeDefined();
-    expect(select('paragraph', caption)).toBeDefined();
+    const titleParagraph = (caption as { children?: { type: string }[] }).children?.[0];
+    expect(titleParagraph?.type).toBe('paragraph');
+    expect(select('paragraph > strong', caption)).toBeDefined();
+    expect(select('caption > paragraph:nth-child(2)', container)).toBeDefined();
     expect(
       vfile.messages.some((m) => m.reason?.includes('Moved figure title from caption to figure')),
     ).toBe(false);

@@ -1,0 +1,36 @@
+# Table (<table-wrap>) conversion cases. Loaded by convert.spec.ts with all tests/*.yml.
+
+cases:
+  - source: bioRxiv 10.1101/2025.10.22.684031v1 tbls5
+    title: table-wrap with label, titled caption, paragraph and xref converts to table container
+    jats: |-
+      <table-wrap id="tbls5" orientation="portrait" position="float">
+      <label>Supplementary Table 5.</label>
+      <caption><title>Developability characteristics of the most enriched combinatorial variants of N49P7-FR VL reformatted as IgG1</title><p>Red shading indicates developability liabilities, with color intensity proportional to severity. Variants in bold demonstrated the most favorable biophysical profiles and were selected for HIV neutralization analysis (<xref rid="figs15" ref-type="fig">Supplementary Fig. 15</xref>).</p></caption>
+      <graphic xlink:href="684031v1_tbls5.tif"/>
+      </table-wrap>
+    mdast:
+      type: container
+      kind: table
+      label: tbls5
+      identifier: tbls5
+      children:
+        - type: caption
+          children:
+            - type: paragraph
+              children:
+                - type: strong
+                  children:
+                    - type: text
+                      value: Developability characteristics of the most enriched combinatorial variants of N49P7-FR VL reformatted as IgG1
+            - type: paragraph
+              children:
+                - type: crossReference
+                  kind: figure
+                  label: figs15
+                  identifier: figs15
+                  children:
+                    - type: text
+                      value: Supplementary Fig. 15
+        - type: image
+          url: 684031v1_tbls5.tif

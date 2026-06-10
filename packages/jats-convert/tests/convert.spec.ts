@@ -31,19 +31,23 @@ import { treeContainsPartial } from './helpers/mdastPartial';
 import abstractDescriptionYml from './abstract-description.yml' with { type: 'text' };
 import basicYml from './basic.yml' with { type: 'text' };
 import boxedtextYml from './boxedtext.yml' with { type: 'text' };
+import figuresYml from './figures.yml' with { type: 'text' };
 import imagesYml from './images.yml' with { type: 'text' };
 import mathYml from './math.yml' with { type: 'text' };
 import preformatYml from './preformat.yml' with { type: 'text' };
 import referencesYml from './references.yml' with { type: 'text' };
+import tablesYml from './tables.yml' with { type: 'text' };
 
 const YAML_FIXTURES: Record<string, string> = {
   'abstract-description.yml': abstractDescriptionYml,
   'basic.yml': basicYml,
   'boxedtext.yml': boxedtextYml,
+  'figures.yml': figuresYml,
   'images.yml': imagesYml,
   'math.yml': mathYml,
   'preformat.yml': preformatYml,
   'references.yml': referencesYml,
+  'tables.yml': tablesYml,
 };
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
