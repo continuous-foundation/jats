@@ -10,6 +10,29 @@ export function toText(node: Node | undefined) {
   return mystToText(node as any);
 }
 
+function bibtexPlainText(value: string | Node | undefined | null): string {
+  if (value == null) return '';
+  if (typeof value === 'string') return value;
+  return toText(value);
+}
+
+/**
+ * Escape LaTeX special characters for BibTeX braced field values.
+ *
+ * citation-js and other BibTeX parsers treat `$`, `%`, etc. as LaTeX syntax;
+ * unescaped values (e.g. "$1,000" in a collab author) fail to parse.
+ */
+export function escapeBibtex(value: string | Node | undefined | null): string {
+  return bibtexPlainText(value)
+    .replace(/\\/g, '\\\\')
+    .replace(/([{}$%#&_^~])/g, '\\$1');
+}
+
+/** Format plain text as a braced BibTeX field value. */
+export function bibtexField(value: string | Node | undefined | null): string {
+  return `{${escapeBibtex(value)}}`;
+}
+
 /**
  * Extract raw text while preserving whitespace/newlines, ignoring markup nodes.
  *
