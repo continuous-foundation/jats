@@ -78,6 +78,10 @@ cases:
   - title: URL in parens is not an abbreviation
     text: See httpspath (https://example.org/path).
     abbreviations: {}
+  - title: Abbreviation nested in parentheses drops closing paren
+    text: GFP cells (1514 cells after quality control (QC))
+    abbreviations:
+      QC: quality control
   - title: Quoted label in parens is not an abbreviation
     text: test set ("Test")
     abbreviations: {}
