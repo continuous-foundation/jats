@@ -20,6 +20,25 @@ describe('repairKnownXmlDefects', () => {
     expect(xml).toBe(input);
     expect(applied).toHaveLength(0);
   });
+
+  test('repairs truncated acute accent markup in surname', () => {
+    const input =
+      '<string-name><surname>Meth&#x2019;{e</surname> <given-names>M</given-names></string-name>';
+    const { xml, applied } = repairKnownXmlDefects(input);
+    expect(xml).toBe(
+      '<string-name><surname>Methé</surname> <given-names>M</given-names></string-name>',
+    );
+    expect(applied).toHaveLength(1);
+    expect(applied[0].count).toBe(1);
+    expect(applied[0].repair.from).toContain('truncated accent in <surname>');
+  });
+
+  test('leaves unknown truncated accent letters unchanged', () => {
+    const input = '<surname>Foo&#x2019;{z</surname>';
+    const { xml, applied } = repairKnownXmlDefects(input);
+    expect(xml).toBe(input);
+    expect(applied).toHaveLength(0);
+  });
 });
 
 describe('JATS known XML defect repairs', () => {
