@@ -38,7 +38,9 @@ function stripLabelPrefix(label: string, kind: EnumeratorKind): string | undefin
   const trimmed = label.trim();
   if (!trimmed) return undefined;
   const prefix = kind === 'figure' ? FIGURE_LABEL_PREFIX : TABLE_LABEL_PREFIX;
-  const rest = trimmed.replace(prefix, '').trim();
+  const match = trimmed.match(prefix);
+  if (!match) return undefined;
+  const rest = trimmed.slice(match[0].length).trim();
   return rest || undefined;
 }
 
@@ -77,7 +79,20 @@ export function resolveEnumerator(opts: {
     return fromLabel;
   }
 
-  return fromLabel ?? fromId;
+  const enumerator = fromLabel ?? fromId;
+  if (!enumerator && (opts.id || opts.labelText)) {
+    jatsFileWarn(opts.file, 'Could not determine container enumerator from id or label', {
+      source: opts.source,
+      note: [
+        `kind=${opts.kind}`,
+        opts.id ? `id=${opts.id}` : undefined,
+        opts.labelText ? `label=${opts.labelText}` : undefined,
+      ]
+        .filter(Boolean)
+        .join('; '),
+    });
+  }
+  return enumerator;
 }
 
 function hasEnumerator(node: GenericParent): boolean {
