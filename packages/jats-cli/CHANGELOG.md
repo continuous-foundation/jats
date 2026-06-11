@@ -1,5 +1,22 @@
 # jats-cli
 
+## 1.1.6
+
+### Patch Changes
+
+- Updated dependencies [fc3b0fa]
+- Updated dependencies [84ba801]
+- Updated dependencies [f94f9b7]
+- Updated dependencies [9b11901]
+- Updated dependencies [f9c0adb]
+- Updated dependencies [f9c0adb]
+- Updated dependencies [f9c0adb]
+  - jats-convert@1.1.6
+  - jats-fetch@1.1.6
+  - jats-xml@1.1.6
+  - jats-tags@1.1.6
+  - jats-utils@1.1.6
+
 ## 1.1.5
 
 ### Patch Changes

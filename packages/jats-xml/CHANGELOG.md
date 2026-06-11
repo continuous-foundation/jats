@@ -1,5 +1,13 @@
 # jats-xml
 
+## 1.1.6
+
+### Patch Changes
+
+- f9c0adb: Add known defect for poorly constructed accent in bib name
+  - jats-tags@1.1.6
+  - jats-utils@1.1.6
+
 ## 1.1.5
 
 ### Patch Changes
