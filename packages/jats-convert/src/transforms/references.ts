@@ -10,7 +10,7 @@ import { select, selectAll } from 'unist-util-select';
 import { Session } from 'myst-cli-utils';
 import type { Options } from '../types.js';
 import { jatsFileWarn } from '../messages.js';
-import { toText } from '../utils.js';
+import { bibtexField, escapeBibtex, toText } from '../utils.js';
 
 function cacheFolder(dir: string) {
   return path.join(dir, '_build', 'cache');
@@ -98,50 +98,50 @@ function bibtexFromCite(
       return;
     if (child.type === 'article-title') {
       // This would be nicer if we did JATS -> LaTeX
-      bibtexLines.push(`  title = {${toText(child)}}`);
+      bibtexLines.push(`  title = ${bibtexField(child)}`);
     } else if (child.type === 'year') {
-      bibtexLines.push(`  year = {${toText(child)}}`);
+      bibtexLines.push(`  year = ${bibtexField(child)}`);
     } else if (child.type === 'source') {
       const field =
         entryType === 'book' ? 'title' : entryType === 'inbook' ? 'booktitle' : 'journal';
-      bibtexLines.push(`  ${field} = {${toText(child)}}`);
+      bibtexLines.push(`  ${field} = ${bibtexField(child)}`);
     } else if (['part-title', 'chapter-title', 'data-title'].includes(child.type)) {
-      bibtexLines.push(`  title = {${toText(child)}}`);
+      bibtexLines.push(`  title = ${bibtexField(child)}`);
     } else if (child.type === 'patent') {
       // We need to improve this, there is critical patent info in text nodes...
       patentTitle = `${patentTitle}${toText(child)}`;
     } else if (child.type === 'issue') {
-      bibtexLines.push(`  number = {${toText(child)}}`);
+      bibtexLines.push(`  number = ${bibtexField(child)}`);
     } else if (child.type === 'volume') {
-      bibtexLines.push(`  volume = {${toText(child)}}`);
+      bibtexLines.push(`  volume = ${bibtexField(child)}`);
     } else if (child.type === 'conf-name') {
-      bibtexLines.push(`  booktitle = {${toText(child)}}`);
+      bibtexLines.push(`  booktitle = ${bibtexField(child)}`);
     } else if (child.type === 'institution') {
-      bibtexLines.push(`  institution = {${toText(child)}}`);
+      bibtexLines.push(`  institution = ${bibtexField(child)}`);
     } else if (child.type === 'uri') {
-      bibtexLines.push(`  howpublished = {\\url{${child['xlink:href']}}}`);
+      bibtexLines.push(`  howpublished = {\\url{${escapeBibtex(child['xlink:href'])}}}`);
     } else if (child.type === 'date-in-citation') {
       if (child['content-type'] === 'access-date') {
-        bibtexLines.push(`  note = {Accessed: ${toText(child)}}`);
+        bibtexLines.push(`  note = {Accessed: ${escapeBibtex(child)}}`);
       } else {
-        bibtexLines.push(`  note = {${toText(child)}}`);
+        bibtexLines.push(`  note = ${bibtexField(child)}`);
       }
     } else if (child.type === 'fpage') {
       fpage = toText(child);
     } else if (child.type === 'lpage') {
       lpage = toText(child);
     } else if (child.type === 'edition') {
-      bibtexLines.push(`  edition = {${toText(child)}}`);
+      bibtexLines.push(`  edition = ${bibtexField(child)}`);
     } else if (child.type === 'publisher-name') {
-      bibtexLines.push(`  publisher = {${toText(child)}}`);
+      bibtexLines.push(`  publisher = ${bibtexField(child)}`);
     } else if (['publisher-loc', 'conf-loc'].includes(child.type)) {
-      bibtexLines.push(`  address = {${toText(child)}}`);
+      bibtexLines.push(`  address = ${bibtexField(child)}`);
     } else if (child.type === 'person-group') {
       const names = selectAll('name,string-name,collab,etal', child).map((n) => {
         if (n.type === 'etal') return 'others';
-        if (n.type === 'collab') return `{${toText(n)}}`;
-        if (!select('surname', n) || !select('given-names', n)) return `${toText(n)}`;
-        return `${toText(select('surname', n))}, ${toText(select('given-names', n))}`;
+        if (n.type === 'collab') return bibtexField(n);
+        if (!select('surname', n) || !select('given-names', n)) return escapeBibtex(n);
+        return `${escapeBibtex(select('surname', n))}, ${escapeBibtex(select('given-names', n))}`;
       });
       if (child['person-group-type'] === 'editor') {
         editors.push(...names);
@@ -150,14 +150,16 @@ function bibtexFromCite(
       }
     } else if (['name', 'string-name'].includes(child.type)) {
       if (!select('surname', child) || !select('given-names', child)) {
-        authors.push(`${toText(child)}`);
+        authors.push(escapeBibtex(child));
       } else {
         authors.push(
-          `${toText(select('surname', child))}, ${toText(select('given-names', child))}`,
+          `${escapeBibtex(select('surname', child))}, ${escapeBibtex(
+            select('given-names', child),
+          )}`,
         );
       }
     } else if (child.type === 'collab') {
-      authors.push(`{${toText(child)}}`);
+      authors.push(bibtexField(child));
     } else if (child.type === 'etal') {
       authors.push('others');
       // } else if (!['text', 'bold', 'italic', 'comment'].includes(child.type)) {
@@ -180,10 +182,12 @@ function bibtexFromCite(
     }
   });
   if (patentTitle && !bibtexLines.find((line) => line.startsWith('  title = ')))
-    bibtexLines.push(`  title = {${patentTitle}}`);
+    bibtexLines.push(`  title = ${bibtexField(patentTitle)}`);
   if (maybeFpage && !fpage) fpage = maybeFpage;
   if (fpage) {
-    bibtexLines.push(`  pages = {${fpage}${lpage ? `--${lpage}` : ''}}`);
+    bibtexLines.push(
+      `  pages = {${escapeBibtex(fpage)}${lpage ? `--${escapeBibtex(lpage)}` : ''}}`,
+    );
   }
   if (authors.length) {
     bibtexLines.push(`  author = {${authors.join(' and ')}}`);
@@ -192,11 +196,11 @@ function bibtexFromCite(
     bibtexLines.push(`  editor = {${editors.join(' and ')}}`);
   }
   if (doi) {
-    bibtexLines.push(`  doi = {${doi}}`);
+    bibtexLines.push(`  doi = ${bibtexField(doi)}`);
   }
   if (bibtexLines.length === 1) {
     counts.unprocessed += 1;
-    bibtexLines.push(`  note = {${toText(cite)}}`);
+    bibtexLines.push(`  note = ${bibtexField(cite)}`);
   } else {
     counts.bibtex += 1;
     counts.lostRefItems.push(...skipped);
