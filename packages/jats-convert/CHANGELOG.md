@@ -1,5 +1,20 @@
 # jats-convert
 
+## 1.1.6
+
+### Patch Changes
+
+- fc3b0fa: Put container titles in paragraphs
+- 84ba801: Pull enumerators from figure/table ids/labels
+- f94f9b7: Split out math handlers and understand images as children of math nodes
+- 9b11901: No extra paren in the abbrs
+- f9c0adb: Escape latex in bibtex writing
+- Updated dependencies [f9c0adb]
+- Updated dependencies [f9c0adb]
+  - jats-fetch@1.1.6
+  - jats-xml@1.1.6
+  - jats-tags@1.1.6
+
 ## 1.1.5
 
 ### Patch Changes

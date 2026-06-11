@@ -1,5 +1,11 @@
 # jats-fetch
 
+## 1.1.6
+
+### Patch Changes
+
+- f9c0adb: Improve url -> pmid log lines
+
 ## 1.1.5
 
 ## 1.1.4

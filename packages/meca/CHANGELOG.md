@@ -1,5 +1,13 @@
 # meca
 
+## 1.1.6
+
+### Patch Changes
+
+- Updated dependencies [f9c0adb]
+  - jats-xml@1.1.6
+  - jats-utils@1.1.6
+
 ## 1.1.5
 
 ### Patch Changes
