@@ -39,6 +39,7 @@ import preformatYml from './preformat.yml' with { type: 'text' };
 import referencesYml from './references.yml' with { type: 'text' };
 import tablesYml from './tables.yml' with { type: 'text' };
 import enumeratorsYml from './enumerators.yml' with { type: 'text' };
+import supplementaryYml from './supplementary.yml' with { type: 'text' };
 
 const YAML_FIXTURES: Record<string, string> = {
   'abstract-description.yml': abstractDescriptionYml,
@@ -51,6 +52,7 @@ const YAML_FIXTURES: Record<string, string> = {
   'preformat.yml': preformatYml,
   'references.yml': referencesYml,
   'tables.yml': tablesYml,
+  'supplementary.yml': supplementaryYml,
 };
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));

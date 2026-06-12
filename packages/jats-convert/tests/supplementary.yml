@@ -1,0 +1,112 @@
+cases:
+  - source: supplementary-multi-file
+    title: supplementary-material with multiple non-graphic media produces labeled download links
+    jats: |-
+      <sec sec-type="supplementary-material">
+        <title>Supporting information</title>
+        <supplementary-material id="DC2">
+          <label>Supplementary Information</label>
+          <media xlink:href="supplements/DC2/001370-1.pdf" mimetype="application" mime-subtype="pdf"/>
+          <media xlink:href="supplements/DC2/001370-2.xls" mimetype="application" mime-subtype="vnd.ms-excel"/>
+        </supplementary-material>
+      </sec>
+    mdast:
+      type: block
+      data:
+        part: supplementary-material
+      children:
+        - type: heading
+          children:
+            - type: text
+              value: Supporting information
+        - type: div
+          identifier: dc2
+          children:
+            - type: list
+              ordered: true
+              children:
+                - type: listItem
+                  children:
+                    - type: paragraph
+                      children:
+                        - type: link
+                          url: supplements/DC2/001370-1.pdf
+                          static: true
+                          data:
+                            contentType: application/pdf
+                          children:
+                            - type: text
+                              value: Supplementary File 1 (pdf)
+                - type: listItem
+                  children:
+                    - type: paragraph
+                      children:
+                        - type: link
+                          url: supplements/DC2/001370-2.xls
+                          static: true
+                          data:
+                            contentType: application/vnd.ms-excel
+                          children:
+                            - type: text
+                              value: Supplementary File 2 (xls)
+    expect_no_warn_contains:
+      - Supplementary-material rendered as generic content
+
+  - source: supplementary-single-file
+    title: single supplementary file uses a paragraph link
+    jats: |-
+      <supplementary-material id="S1">
+        <media xlink:href="supplements/data.csv" mimetype="text" mime-subtype="csv"/>
+      </supplementary-material>
+    mdast:
+      type: div
+      identifier: s1
+      children:
+        - type: paragraph
+          children:
+            - type: link
+              url: supplements/data.csv
+              static: true
+              data:
+                contentType: text/csv
+              children:
+                - type: text
+                  value: Supplementary File 1 (csv)
+
+  - source: supplementary-multi-figure
+    title: multiple supplementary figures are grouped in a div
+    jats: |-
+      <supplementary-material id="SF">
+        <media xlink:href="supplements/fig-s1.png" mimetype="image" mime-subtype="png"/>
+        <media xlink:href="supplements/fig-s2.png" mimetype="image" mime-subtype="png"/>
+      </supplementary-material>
+    mdast:
+      type: div
+      identifier: sf
+      children:
+        - type: container
+          kind: figure
+        - type: container
+          kind: figure
+    expect_no_warn_contains:
+      - Supplementary-material rendered as generic content
+
+  - source: supplementary-media-with-extra-children
+    title: warns when valid media is rendered but other child content is skipped
+    jats: |-
+      <supplementary-material id="DC2">
+        <label>Supplementary Information</label>
+        <media xlink:href="supplements/DC2/file.pdf" mimetype="application" mime-subtype="pdf"/>
+        <p>Extra description not rendered with media-only path.</p>
+      </supplementary-material>
+    mdast:
+      type: div
+      identifier: dc2
+      children:
+        - type: paragraph
+          children:
+            - type: link
+              url: supplements/DC2/file.pdf
+              static: true
+    expect_warn_contains:
+      - Supplementary-material has unhandled child content alongside media
