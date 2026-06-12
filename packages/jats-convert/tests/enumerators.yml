@@ -94,6 +94,52 @@ cases:
       kind: table
       enumerator: '1'
 
+  - source: fig-supplementary-label-uses-id
+    title: supplementary figure label without leading Figure prefix falls back to id enumerator
+    jats: |-
+      <fig id="figS1" position="float" fig-type="figure">
+        <label>Supplementary Figure 1:</label>
+        <caption><title>Comparison of t...</title>
+        <p>(A and B) High magnification time-lapse sequences.</p></caption>
+        <graphic xlink:href="495176_figS1.tif"/>
+      </fig>
+    mdast:
+      type: container
+      kind: figure
+      identifier: figs1
+      enumerator: S1
+    expect_no_warn_contains:
+      - Container id and label enumerators do not match
+      - Could not determine container enumerator from id or label
+
+  - source: fig-nonstandard-id-warns
+    title: non-standard id with no parsable label warns and has no enumerator
+    jats: |-
+      <fig id="pclm.0000068.g001" position="float">
+        <caption><p>Figure without standard numbering.</p></caption>
+        <graphic xlink:href="fig.png"/>
+      </fig>
+    mdast:
+      type: container
+      kind: figure
+      identifier: pclm.0000068.g001
+    expect_warn_contains:
+      - Could not determine container enumerator from id or label
+
+  - source: fig-supplementary-label-only-warns
+    title: supplementary-style label without id or Figure prefix warns
+    jats: |-
+      <fig position="float">
+        <label>Supplementary Figure 1:</label>
+        <caption><p>Supplement only.</p></caption>
+        <graphic xlink:href="fig-s1.png"/>
+      </fig>
+    mdast:
+      type: container
+      kind: figure
+    expect_warn_contains:
+      - Could not determine container enumerator from id or label
+
   - source: fig-id-label-mismatch
     title: mismatched id and label prefer label enumerator and warn
     jats: |-
@@ -127,6 +173,7 @@ cases:
       enumerator: '1'
     expect_warn_contains:
       - Mix of enumerated and non-enumerated figures
+      - Could not determine container enumerator from id or label
 
   - source: fig-all-enumerated
     title: all figures enumerated does not warn about mixed enumeration
@@ -164,6 +211,8 @@ cases:
       kind: figure
     expect_no_warn_contains:
       - Mix of enumerated and non-enumerated figures
+    expect_warn_contains:
+      - Could not determine container enumerator from id or label
 
   - source: table-mixed-enumeration
     title: mix of enumerated and non-enumerated tables warns once
@@ -181,6 +230,7 @@ cases:
       enumerator: '1'
     expect_warn_contains:
       - Mix of enumerated and non-enumerated tables
+      - Could not determine container enumerator from id or label
 
   - source: figures-enumerated-tables-not
     title: all figures enumerated and all tables non-enumerated is fine
