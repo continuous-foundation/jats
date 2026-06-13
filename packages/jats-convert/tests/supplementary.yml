@@ -23,7 +23,6 @@ cases:
           identifier: dc2
           children:
             - type: list
-              ordered: true
               children:
                 - type: listItem
                   children:

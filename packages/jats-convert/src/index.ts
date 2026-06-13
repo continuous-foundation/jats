@@ -496,7 +496,7 @@ const handlers: Record<string, Handler> = {
       const withUrl = media.filter((item) => item['xlink:href']);
       if (withUrl.length === 0) return;
       if (withUrl.length > 1) {
-        state.openNode('list', { ordered: true });
+        state.openNode('list', { ordered: false });
       }
       withUrl.forEach((item, index) => {
         const url = item['xlink:href'] as string;
