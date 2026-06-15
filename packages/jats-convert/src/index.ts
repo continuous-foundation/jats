@@ -529,9 +529,7 @@ const handlers: Record<string, Handler> = {
         'Supplementary-material has unhandled child content alongside media',
         'supplementary-material',
         {
-          note: node.id
-            ? `id=${node.id} types=${types.join(', ')}`
-            : `types=${types.join(', ')}`,
+          note: node.id ? `id=${node.id} types=${types.join(', ')}` : `types=${types.join(', ')}`,
         },
       );
     };
@@ -546,7 +544,9 @@ const handlers: Record<string, Handler> = {
       if (node.id) {
         state.openNode('div', { label, identifier });
       }
-      figureMedia.forEach((media) => renderMediaFigure(media));
+      figureMedia.forEach((media) => {
+        renderMediaFigure(media);
+      });
       renderMediaFiles(fileMedia);
       if (node.id) {
         state.closeNode();
