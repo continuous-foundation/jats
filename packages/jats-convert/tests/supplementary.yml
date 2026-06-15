@@ -35,7 +35,7 @@ cases:
                             contentType: application/pdf
                           children:
                             - type: text
-                              value: Supplementary File 1 (pdf)
+                              value: Supplementary file (pdf)
                 - type: listItem
                   children:
                     - type: paragraph
@@ -47,7 +47,7 @@ cases:
                             contentType: application/vnd.ms-excel
                           children:
                             - type: text
-                              value: Supplementary File 2 (xls)
+                              value: Supplementary file (xls)
     expect_no_warn_contains:
       - Supplementary-material rendered as generic content
 
@@ -70,7 +70,7 @@ cases:
                 contentType: text/csv
               children:
                 - type: text
-                  value: Supplementary File 1 (csv)
+                  value: Supplementary file (csv)
 
   - source: supplementary-multi-figure
     title: multiple supplementary figures are grouped in a div
@@ -109,3 +109,55 @@ cases:
               static: true
     expect_warn_contains:
       - Supplementary-material has unhandled child content alongside media
+
+  - source: supplementary-labeled-siblings
+    title: sibling supplementary-material elements use their labels as link text
+    jats: |-
+      <sec sec-type="supplementary-material">
+        <title>Supporting information</title>
+        <supplementary-material>
+          <label>Supplemental figures and tables</label>
+          <media xlink:href="supplements/729924_file02.docx"/>
+        </supplementary-material>
+        <supplementary-material>
+          <label>Supplemental table 5</label>
+          <media xlink:href="supplements/729924_file03.xlsx"/>
+        </supplementary-material>
+        <supplementary-material>
+          <label>Supplemental table 6</label>
+          <media xlink:href="supplements/729924_file04.xlsx"/>
+        </supplementary-material>
+      </sec>
+    mdast:
+      type: block
+      data:
+        part: supplementary-material
+      children:
+        - type: heading
+          children:
+            - type: text
+              value: Supporting information
+        - type: paragraph
+          children:
+            - type: link
+              url: supplements/729924_file02.docx
+              static: true
+              children:
+                - type: text
+                  value: Supplemental figures and tables
+        - type: paragraph
+          children:
+            - type: link
+              url: supplements/729924_file03.xlsx
+              static: true
+              children:
+                - type: text
+                  value: Supplemental table 5
+        - type: paragraph
+          children:
+            - type: link
+              url: supplements/729924_file04.xlsx
+              static: true
+              children:
+                - type: text
+                  value: Supplemental table 6

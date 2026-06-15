@@ -1,5 +1,5 @@
 import type { GenericNode } from 'myst-common';
-import { select, selectAll } from 'unist-util-select';
+import { select } from 'unist-util-select';
 
 export const MEDIA_FIGURE_EXTENSIONS = [
   '.png',
@@ -56,8 +56,17 @@ export function fileTypeLabel(media: GenericNode, url: string): string {
   return 'file';
 }
 
-export function supplementaryFileLinkLabel(index: number, media: GenericNode, url: string): string {
-  return `Supplementary File ${index + 1} (${fileTypeLabel(media, url)})`;
+export function supplementaryFileLinkLabel(opts: {
+  media: GenericNode;
+  url: string;
+  groupLabel?: string;
+  singleFile?: boolean;
+}): string {
+  const { media, url, groupLabel, singleFile } = opts;
+  if (singleFile && groupLabel?.trim()) {
+    return groupLabel.trim();
+  }
+  return `Supplementary file (${fileTypeLabel(media, url)})`;
 }
 
 export function captionFromSupplementary(

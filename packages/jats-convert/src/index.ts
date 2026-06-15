@@ -495,10 +495,13 @@ const handlers: Record<string, Handler> = {
     const renderMediaFiles = (media: GenericNode[]) => {
       const withUrl = media.filter((item) => item['xlink:href']);
       if (withUrl.length === 0) return;
+      const labelElement = select('label', node) as GenericNode | undefined;
+      const groupLabel = labelElement ? toText(labelElement) : undefined;
+      const singleFile = withUrl.length === 1;
       if (withUrl.length > 1) {
         state.openNode('list', { ordered: false });
       }
-      withUrl.forEach((item, index) => {
+      withUrl.forEach((item) => {
         const url = item['xlink:href'] as string;
         const contentType = mimeTypeFromMedia(item);
         if (withUrl.length > 1) {
@@ -510,7 +513,7 @@ const handlers: Record<string, Handler> = {
           static: true,
           data: contentType ? { contentType } : undefined,
         });
-        state.text(supplementaryFileLinkLabel(index, item, url));
+        state.text(supplementaryFileLinkLabel({ media: item, url, groupLabel, singleFile }));
         state.closeNode();
         state.closeNode();
         if (withUrl.length > 1) {
