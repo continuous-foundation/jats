@@ -1,0 +1,143 @@
+cases:
+  - title: theorem statement converts to proof with kind and enumerator from label
+    jats: |-
+      <statement id="stat1">
+      <label>Theorem 2.1</label>
+      <p><italic>Consider the sample variance</italic> for the model.</p>
+      <p>In terms of our estimator, <xref ref-type="statement" rid="stat1">Theorem 2.1</xref> yields a consistent estimator.</p>
+      </statement>
+    mdast:
+      type: proof
+      kind: theorem
+      label: stat1
+      identifier: stat1
+      enumerator: '2.1'
+      children:
+        - type: paragraph
+          children:
+            - type: emphasis
+              children:
+                - type: text
+                  value: Consider the sample variance
+            - type: text
+              value: ' for the model.'
+        - type: paragraph
+          children:
+            - type: text
+              value: 'In terms of our estimator, '
+            - type: crossReference
+              kind: proof
+              label: stat1
+              identifier: stat1
+              children:
+                - type: text
+                  value: Theorem 2.1
+
+  - title: algorithm statement with title and preformat
+    jats: |-
+      <statement id="alg1">
+      <label>Algorithm 1</label>
+      <title>A bubble detection algorithm (2<italic>k</italic> + 2)</title>
+      <p><preformat>1: Initialize
+      2: Loop</preformat></p>
+      </statement>
+    mdast:
+      type: proof
+      kind: algorithm
+      label: alg1
+      identifier: alg1
+      enumerator: '1'
+      children:
+        - type: admonitionTitle
+          children:
+            - type: text
+              value: 'A bubble detection algorithm (2'
+            - type: emphasis
+              children:
+                - type: text
+                  value: k
+            - type: text
+              value: ' + 2)'
+        - type: paragraph
+          children:
+            - type: code
+              lang: text
+              value: |-
+                1: Initialize
+                2: Loop
+
+  - title: statement kind from content-type when label has no prefix
+    jats: |-
+      <statement id="note1" content-type="remark">
+      <label>Note</label>
+      <p>Remark body.</p>
+      </statement>
+    mdast:
+      type: proof
+      kind: remark
+      label: note1
+      identifier: note1
+      children:
+        - type: paragraph
+          children:
+            - type: text
+              value: Remark body.
+
+  - title: statement missing label warns
+    jats: |-
+      <statement id="stat1">
+      <p>Body without label.</p>
+      </statement>
+    mdast:
+      type: proof
+      label: stat1
+      identifier: stat1
+      children:
+        - type: paragraph
+          children:
+            - type: text
+              value: Body without label.
+    expect_warn_contains:
+      - Statement missing label
+      - Statement has no proof kind
+
+  - title: hypothesis label warns about unmapped proof kind
+    jats: |-
+      <statement id="hyp1">
+      <label>Hypothesis 3</label>
+      <p>Hypothesis body.</p>
+      </statement>
+    mdast:
+      type: proof
+      label: hyp1
+      identifier: hyp1
+      enumerator: '3'
+      children:
+        - type: paragraph
+          children:
+            - type: text
+              value: Hypothesis body.
+    expect_warn_contains:
+      - no MyST proof kind mapping
+      - Statement has no proof kind
+
+  - title: unknown statement content-type warns
+    jats: |-
+      <statement id="x1" content-type="folklore">
+      <label>Folklore 1</label>
+      <p>Text.</p>
+      </statement>
+    mdast:
+      type: proof
+      label: x1
+      identifier: x1
+      children:
+        - type: paragraph
+          children:
+            - type: text
+              value: Text.
+    expect_warn_contains:
+      - Unknown statement content-type
+      - Could not determine statement kind from label
+      - Could not determine statement enumerator
+      - Statement has no proof kind

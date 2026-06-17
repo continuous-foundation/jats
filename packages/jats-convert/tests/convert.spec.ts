@@ -40,6 +40,7 @@ import referencesYml from './references.yml' with { type: 'text' };
 import tablesYml from './tables.yml' with { type: 'text' };
 import enumeratorsYml from './enumerators.yml' with { type: 'text' };
 import supplementaryYml from './supplementary.yml' with { type: 'text' };
+import statementYml from './statement.yml' with { type: 'text' };
 
 const YAML_FIXTURES: Record<string, string> = {
   'abstract-description.yml': abstractDescriptionYml,
@@ -53,6 +54,7 @@ const YAML_FIXTURES: Record<string, string> = {
   'references.yml': referencesYml,
   'tables.yml': tablesYml,
   'supplementary.yml': supplementaryYml,
+  'statement.yml': statementYml,
 };
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
