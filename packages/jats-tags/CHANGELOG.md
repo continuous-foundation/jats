@@ -1,5 +1,11 @@
 # jats-tags
 
+## 1.1.7
+
+### Patch Changes
+
+- 69ca0ca: Support nonstandard xref ref-types
+
 ## 1.1.6
 
 ## 1.1.5

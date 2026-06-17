@@ -1,5 +1,24 @@
 # jats-convert
 
+## 1.1.7
+
+### Patch Changes
+
+- 69ca0ca: Support jats statements as myst proofs
+- b48b4e6: Only pull enumerators from correctly structured labels
+- 69ca0ca: Support more citation fields in generated bibtex
+- 69ca0ca: Handle more abstract title structures
+- b048036: Add custom handling for supplementary files
+
+  Previously, supplementary "media" nodes were treated as "generic children" if they were not known image types.
+  Now they are recognized and supported as download links without warnings.
+
+- 69ca0ca: Support nonstandard xref ref-types
+- Updated dependencies [69ca0ca]
+  - jats-tags@1.1.7
+  - jats-xml@1.1.7
+  - jats-fetch@1.1.7
+
 ## 1.1.6
 
 ### Patch Changes
