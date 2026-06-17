@@ -40,21 +40,13 @@ import { floatToEndTransform } from './transforms/supplementary.js';
 import { dataAvailabilityTransform } from './transforms/parts.js';
 import { abbreviationsFromTree } from './myst/abbreviations.js';
 import { resolveEnumerator, warnMixedContainerEnumerators } from './enumerator.js';
-
-const MEDIA_FIGURE_EXTENSIONS = [
-  '.png',
-  '.jpg',
-  '.jpeg',
-  '.svg',
-  '.gif',
-  '.tiff',
-  '.tif',
-  '.eps',
-  '.webp',
-  '.mp4',
-  '.mov',
-  '.avi',
-];
+import {
+  captionFromSupplementary,
+  isFigureMediaUrl,
+  mimeTypeFromMedia,
+  supplementaryFileLinkLabel,
+  unhandledSupplementaryChildTypes,
+} from './supplementary.js';
 
 function refTypeToReferenceKind(kind?: RefType): string | undefined {
   switch (kind) {
@@ -453,24 +445,21 @@ const handlers: Record<string, Handler> = {
   },
   ['supplementary-material'](node, state) {
     const { label, identifier } = normalizeLabel(node.id) ?? {};
-    let maybeCaption: GenericNode | undefined;
-    let media: GenericNode | undefined;
-    if (node.children?.length === 1 && node.children[0].type === 'media') {
-      media = node.children[0];
-    } else if (
-      node.children?.length === 2 &&
-      node.children[0].type === 'label' &&
-      node.children[1].type === 'media'
-    ) {
-      maybeCaption = node.children[0];
-      media = node.children[1];
-    }
-    const url = media?.['xlink:href'];
-    let caption = (select('caption', media) ?? maybeCaption) as GenericNode | undefined;
-    if (caption?.children?.length === 1 && caption.children[0].type === 'p') {
-      caption = caption.children[0];
-    }
-    if (url && MEDIA_FIGURE_EXTENSIONS.find((ext) => url.endsWith(ext))) {
+    const mediaNodes = selectAll('media', node) as GenericNode[];
+    const figureMedia = mediaNodes.filter((media) => isFigureMediaUrl(media['xlink:href']));
+    const fileMedia = mediaNodes.filter(
+      (media) => media['xlink:href'] && !isFigureMediaUrl(media['xlink:href']),
+    );
+
+    const renderMediaFigure = (media: GenericNode) => {
+      const url = media['xlink:href'];
+      if (!url) {
+        state.warn('Supplementary-material media without xlink:href', 'supplementary-material', {
+          note: node.id ? `id=${node.id}` : undefined,
+        });
+        return;
+      }
+      const caption = captionFromSupplementary(node, media);
       const title = select('title', media) as GenericNode | undefined;
       const labelElement = select('label', node) as GenericNode | undefined;
       const enumerator = resolveEnumerator({
@@ -501,25 +490,89 @@ const handlers: Record<string, Handler> = {
       state.closeNode();
       state.closeNode();
       state.data.isInContainer = wasInContainer;
-    } else {
-      let detail: string;
-      if (!media) {
-        detail = 'missing expected media child';
-      } else if (!url) {
-        detail = 'media without xlink:href';
-      } else {
-        detail = `url not a figure media extension: ${url}`;
+    };
+
+    const renderMediaFiles = (media: GenericNode[]) => {
+      const withUrl = media.filter((item) => item['xlink:href']);
+      if (withUrl.length === 0) return;
+      const labelElement = select('label', node) as GenericNode | undefined;
+      const groupLabel = labelElement ? toText(labelElement) : undefined;
+      const singleFile = withUrl.length === 1;
+      if (withUrl.length > 1) {
+        state.openNode('list', { ordered: false });
       }
-      state.warn('Supplementary-material rendered as generic content', 'supplementary-material', {
-        note: node.id ? `id=${node.id} ${detail}` : detail,
+      withUrl.forEach((item) => {
+        const url = item['xlink:href'] as string;
+        const contentType = mimeTypeFromMedia(item);
+        if (withUrl.length > 1) {
+          state.openNode('listItem');
+        }
+        state.openNode('paragraph');
+        state.openNode('link', {
+          url,
+          static: true,
+          data: contentType ? { contentType } : undefined,
+        });
+        state.text(supplementaryFileLinkLabel({ media: item, url, groupLabel, singleFile }));
+        state.closeNode();
+        state.closeNode();
+        if (withUrl.length > 1) {
+          state.closeNode();
+        }
       });
+      if (withUrl.length > 1) {
+        state.closeNode();
+      }
+    };
+
+    const warnUnhandledSupplementaryChildren = () => {
+      const types = unhandledSupplementaryChildTypes(node);
+      if (types.length === 0) return;
+      state.warn(
+        'Supplementary-material has unhandled child content alongside media',
+        'supplementary-material',
+        {
+          note: node.id ? `id=${node.id} types=${types.join(', ')}` : `types=${types.join(', ')}`,
+        },
+      );
+    };
+
+    if (figureMedia.length === 1 && fileMedia.length === 0) {
+      renderMediaFigure(figureMedia[0]!);
+      warnUnhandledSupplementaryChildren();
+      return;
+    }
+
+    if (fileMedia.length > 0 || figureMedia.length > 1) {
       if (node.id) {
         state.openNode('div', { label, identifier });
       }
-      state.renderChildren(node);
+      figureMedia.forEach((media) => {
+        renderMediaFigure(media);
+      });
+      renderMediaFiles(fileMedia);
       if (node.id) {
         state.closeNode();
       }
+      warnUnhandledSupplementaryChildren();
+      return;
+    }
+
+    let detail: string;
+    if (mediaNodes.length === 0) {
+      detail = 'missing media children';
+    } else {
+      detail = 'media without xlink:href';
+    }
+    state.warn('Supplementary-material rendered as generic content', 'supplementary-material', {
+      note: node.id ? `id=${node.id} ${detail}` : detail,
+    });
+    if (node.id) {
+      state.openNode('div', { label, identifier });
+    }
+    state.renderChildren(node);
+    if (node.id) {
+      state.closeNode();
     }
   },
   ['app-group'](node, state) {
