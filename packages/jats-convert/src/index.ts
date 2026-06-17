@@ -10,7 +10,7 @@ import { Jats } from 'jats-xml';
 import { select, selectAll } from 'unist-util-select';
 import { u } from 'unist-builder';
 import type { Body, License, LinkMixin } from 'jats-tags';
-import { RefType } from 'jats-tags';
+import { RefType, coerceRefType } from 'jats-tags';
 import type { ISession } from 'jats-xml';
 import type { Handler, IJatsParser, JatsResult, Options, StateData } from './types.js';
 import { mathHandlers } from './math.js';
@@ -41,6 +41,13 @@ import { dataAvailabilityTransform } from './transforms/parts.js';
 import { abbreviationsFromTree } from './myst/abbreviations.js';
 import { resolveEnumerator, warnMixedContainerEnumerators } from './enumerator.js';
 import {
+  proofKindFromDeclaredType,
+  proofTitleFromFigCaption,
+  resolveProofFigure,
+  resolveStatementProof,
+  statementMetadataChildTypes,
+} from './statement.js';
+import {
   captionFromSupplementary,
   isFigureMediaUrl,
   mimeTypeFromMedia,
@@ -58,6 +65,8 @@ function refTypeToReferenceKind(kind?: RefType): string | undefined {
       return 'equation';
     case RefType.table:
       return 'table';
+    case RefType.statement:
+      return 'proof';
     case RefType.custom:
       return undefined;
   }
@@ -169,6 +178,43 @@ const handlers: Record<string, Handler> = {
       state.closeNode();
     }
   },
+  statement(node, state) {
+    const labelNode = select('label', node) as GenericNode | undefined;
+    const titleNode = node.children?.find((child) => child.type === 'title') as
+      | GenericNode
+      | undefined;
+    const labelText = labelNode ? toText(labelNode) : undefined;
+    const { label, identifier } = normalizeLabel(node.id) ?? {};
+    const { kind, enumerator } = resolveStatementProof({
+      id: node.id,
+      labelText,
+      contentType: node['content-type'],
+      file: state.file,
+      source: 'statement',
+    });
+    state.openNode('proof', { kind, label, identifier, enumerator });
+    if (titleNode) {
+      state.openNode('admonitionTitle');
+      state.renderChildren(titleNode);
+      state.closeNode();
+      titleNode.type = '__ignore__';
+    }
+    const metadataTypes = statementMetadataChildTypes(node);
+    if (metadataTypes.length > 0) {
+      state.warn('Statement has unhandled metadata children', 'statement', {
+        note: node.id
+          ? `id=${node.id} types=${metadataTypes.join(', ')}`
+          : `types=${metadataTypes.join(', ')}`,
+      });
+      for (const child of node.children ?? []) {
+        if (metadataTypes.includes(child.type)) {
+          child.type = '__ignore__';
+        }
+      }
+    }
+    state.renderChildren(node);
+    state.closeNode();
+  },
   admonitionTitle(node, state) {
     // This is created in a transform!
     state.renderInline(node, 'admonitionTitle');
@@ -216,9 +262,55 @@ const handlers: Record<string, Handler> = {
     state.addLeaf('image', { url: link });
   },
   fig(node, state) {
-    const caption = select('caption', node) as GenericNode;
-    const graphic = select('graphic,media', node) as GenericNode;
+    const caption = select('caption', node) as GenericNode | undefined;
+    const graphic = select('graphic,media', node) as GenericNode | undefined;
     const labelNode = select('label', node) as GenericNode | undefined;
+
+    if (proofKindFromDeclaredType(node['fig-type'])) {
+      const labelText = labelNode ? toText(labelNode) : undefined;
+      const { label, identifier } = normalizeLabel(node.id) ?? {};
+      const { kind, enumerator } = resolveProofFigure({
+        id: node.id,
+        labelText,
+        figType: node['fig-type'],
+        file: state.file,
+      });
+      const { title, extraCaption } = proofTitleFromFigCaption(caption);
+      state.openNode('proof', { kind, label, identifier, enumerator });
+      if (title) {
+        state.openNode('admonitionTitle');
+        if (title.type === 'p') {
+          state.renderChildren({ children: title.children });
+        } else {
+          state.renderChildren(title);
+        }
+        state.closeNode();
+      }
+      const link = graphic?.['xlink:href'];
+      if (link) {
+        state.addLeaf('image', { url: link });
+      } else {
+        const detail = graphic
+          ? 'graphic or media without xlink:href'
+          : 'no graphic or media child';
+        state.warn('Proof figure has no image URL', 'fig', {
+          note: node.id ? `id=${node.id} ${detail}` : detail,
+        });
+      }
+      if (extraCaption.length > 0) {
+        state.warn('Proof figure has extra caption content', 'fig', {
+          note: node.id ? `id=${node.id}` : undefined,
+        });
+        for (const child of extraCaption) {
+          if (child.type === 'p') {
+            state.renderInline(child, 'paragraph');
+          }
+        }
+      }
+      state.closeNode();
+      return;
+    }
+
     const directTitle = node.children?.find((child) => child.type === 'title') as
       | GenericNode
       | undefined;
@@ -404,9 +496,12 @@ const handlers: Record<string, Handler> = {
     state.closeNode();
   },
   xref(node, state) {
-    const refType: RefType = node['ref-type'];
+    const rawRefType = node['ref-type'];
+    const refType = coerceRefType(typeof rawRefType === 'string' ? rawRefType : undefined);
     if (!node.rid) {
-      state.warn('xref missing rid', 'xref', { note: `ref-type=${refType}` });
+      state.warn('xref missing rid', 'xref', {
+        note: `ref-type=${rawRefType ?? refType ?? ''}`,
+      });
     }
     const { label, identifier } = normalizeLabel(node.rid) ?? {};
     switch (refType) {
@@ -426,7 +521,8 @@ const handlers: Record<string, Handler> = {
       case RefType.sec:
       case RefType.fig:
       case RefType.dispFormula:
-      case RefType.table: {
+      case RefType.table:
+      case RefType.statement: {
         const kind = refTypeToReferenceKind(refType);
         state.renderInline(node, 'crossReference', { label, identifier, kind });
         return;
@@ -438,7 +534,9 @@ const handlers: Record<string, Handler> = {
       }
       default: {
         state.renderInline(node, 'crossReference', { identifier: node.rid });
-        state.warn('Unknown xref ref-type', 'xref', { note: `ref-type=${refType}` });
+        state.warn('Unknown xref ref-type', 'xref', {
+          note: `ref-type=${rawRefType ?? refType ?? ''}`,
+        });
         return;
       }
     }

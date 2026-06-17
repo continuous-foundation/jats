@@ -59,3 +59,51 @@ cases:
                   children:
                     - type: text
                       value: Supplementary Fig. 7
+
+  - title: fig-type algorithm converts to proof with image body and caption title
+    jats: |-
+      <fig id="ufig1" position="float" fig-type="algorithm">
+      <label>Algorithm 1</label>
+      <caption><p>A bubble detection algorithm (2<italic>k</italic> &#x002B; 2).</p></caption>
+      <graphic xlink:href="004507_ufig1.tif"/>
+      </fig>
+    mdast:
+      type: proof
+      kind: algorithm
+      label: ufig1
+      identifier: ufig1
+      enumerator: '1'
+      children:
+        - type: admonitionTitle
+          children:
+            - type: text
+              value: 'A bubble detection algorithm (2'
+            - type: emphasis
+              children:
+                - type: text
+                  value: k
+            - type: text
+              value: ' + 2).'
+        - type: image
+          url: 004507_ufig1.tif
+
+  - title: fig-type theorem converts to proof with caption title element
+    jats: |-
+      <fig id="thm-fig1" fig-type="theorem">
+      <label>Theorem 2</label>
+      <caption><title>Main result</title></caption>
+      <graphic xlink:href="theorem.tif"/>
+      </fig>
+    mdast:
+      type: proof
+      kind: theorem
+      label: thm-fig1
+      identifier: thm-fig1
+      enumerator: '2'
+      children:
+        - type: admonitionTitle
+          children:
+            - type: text
+              value: Main result
+        - type: image
+          url: theorem.tif

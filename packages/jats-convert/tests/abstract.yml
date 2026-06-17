@@ -1,0 +1,182 @@
+# Abstract title handling: drop redundant labels, reorder generic sections, bold non-generic titles.
+# Loaded by convert.spec.ts.
+
+cases:
+  - title: sole generic title is removed without merging into paragraph
+    jats: |-
+      <front>
+      <article-meta>
+      <title-group><article-title>Test</article-title></title-group>
+      <contrib-group><contrib contrib-type="author"><name><surname>T</surname><given-names>A</given-names></name></contrib></contrib-group>
+      <pub-date pub-type="epub"><day>01</day><month>01</month><year>2020</year></pub-date>
+      <abstract><title>Summary</title><p>Abstract body text.</p></abstract>
+      </article-meta>
+      </front>
+      <body><p>Body.</p></body>
+    mdast:
+      type: block
+      data:
+        part: abstract
+      children:
+        - type: paragraph
+          children:
+            - type: text
+              value: Abstract body text.
+
+  - title: multi-title abstract reorders generic section first and bolds non-generic title
+    jats: |-
+      <front>
+      <article-meta>
+      <title-group><article-title>Test</article-title></title-group>
+      <contrib-group><contrib contrib-type="author"><name><surname>T</surname><given-names>A</given-names></name></contrib></contrib-group>
+      <pub-date pub-type="epub"><day>01</day><month>01</month><year>2020</year></pub-date>
+      <abstract>
+      <title>Insight, Innovation and Integration</title>
+      <p>Intro paragraph.</p>
+      <sec><title>Abstract</title><p>Detailed abstract.</p></sec>
+      </abstract>
+      </article-meta>
+      </front>
+      <body><p>Body.</p></body>
+    mdast:
+      type: block
+      data:
+        part: abstract
+      children:
+        - type: paragraph
+          children:
+            - type: text
+              value: Detailed abstract.
+        - type: paragraph
+          children:
+            - type: strong
+              children:
+                - type: text
+                  value: Insight, Innovation and Integration
+        - type: paragraph
+          children:
+            - type: text
+              value: Intro paragraph.
+    expect_warn_contains:
+      - Reordered abstract sections
+      - Moved "Abstract" before "Insight, Innovation and Integration"
+
+  - title: multiple generic sections are reordered to top and both titles dropped
+    jats: |-
+      <front>
+      <article-meta>
+      <title-group><article-title>Test</article-title></title-group>
+      <contrib-group><contrib contrib-type="author"><name><surname>T</surname><given-names>A</given-names></name></contrib></contrib-group>
+      <pub-date pub-type="epub"><day>01</day><month>01</month><year>2020</year></pub-date>
+      <abstract>
+      <title>Highlights</title>
+      <p>Highlight text.</p>
+      <sec><title>Summary</title><p>Summary body.</p></sec>
+      <sec><title>Abstract</title><p>Abstract body.</p></sec>
+      </abstract>
+      </article-meta>
+      </front>
+      <body><p>Body.</p></body>
+    mdast:
+      type: block
+      data:
+        part: abstract
+      children:
+        - type: paragraph
+          children:
+            - type: text
+              value: Summary body.
+        - type: paragraph
+          children:
+            - type: text
+              value: Abstract body.
+        - type: paragraph
+          children:
+            - type: strong
+              children:
+                - type: text
+                  value: Highlights
+        - type: paragraph
+          children:
+            - type: text
+              value: Highlight text.
+    expect_warn_contains:
+      - Moved "Summary", "Abstract" before "Highlights"
+
+  - title: multi-title abstract does not warn when generic section is already first
+    jats: |-
+      <front>
+      <article-meta>
+      <title-group><article-title>Test</article-title></title-group>
+      <contrib-group><contrib contrib-type="author"><name><surname>T</surname><given-names>A</given-names></name></contrib></contrib-group>
+      <pub-date pub-type="epub"><day>01</day><month>01</month><year>2020</year></pub-date>
+      <abstract>
+      <sec><title>Abstract</title><p>Main abstract.</p></sec>
+      <title>Key messages</title>
+      <p>Extra detail.</p>
+      </abstract>
+      </article-meta>
+      </front>
+      <body><p>Body.</p></body>
+    mdast:
+      type: block
+      data:
+        part: abstract
+      children:
+        - type: paragraph
+          children:
+            - type: text
+              value: Main abstract.
+        - type: paragraph
+          children:
+            - type: strong
+              children:
+                - type: text
+                  value: Key messages
+        - type: paragraph
+          children:
+            - type: text
+              value: Extra detail.
+    expect_no_warn_contains:
+      - Reordered abstract sections
+
+  - title: abstract with lone section unwraps and bolds title
+    jats: |-
+      <front>
+      <article-meta>
+      <title-group><article-title>Test</article-title></title-group>
+      <contrib-group><contrib contrib-type="author"><name><surname>T</surname><given-names>A</given-names></name></contrib></contrib-group>
+      <pub-date pub-type="epub"><day>01</day><month>01</month><year>2020</year></pub-date>
+      <abstract>
+      <sec>
+      <title>Key messages</title>
+      <list list-type="bullet">
+      <list-item><p>First item.</p></list-item>
+      </list>
+      </sec>
+      </abstract>
+      </article-meta>
+      </front>
+      <body><p>Body.</p></body>
+    mdast:
+      type: block
+      data:
+        part: abstract
+      children:
+        - type: block
+          children:
+            - type: paragraph
+              children:
+                - type: strong
+                  children:
+                    - type: text
+                      value: Key messages
+            - type: list
+              ordered: false
+              children:
+                - type: listItem
+                  children:
+                    - type: paragraph
+                      children:
+                        - type: text
+                          value: First item.

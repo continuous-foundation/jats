@@ -61,6 +61,11 @@ const BIBTEX_TYPE: Record<string, string> = {
   thesis: 'phdthesis',
 };
 
+const CITATION_INLINE_MARKUP = ['italic', 'bold', 'sup', 'sub', 'sc', 'underline', 'strike'];
+/** Bare text/comment nodes that carry only separators, not bibliographic content. */
+const CITATION_PUNCTUATION_ONLY =
+  /^([\s.;,:\-–()&"'«»‹›\u201c\u201d\u2018\u2019]|p|ed|eds|in|and|st|nd|rd|th)*$/i;
+
 type Counts = {
   dois: number;
   bibtex: number;
@@ -68,6 +73,50 @@ type Counts = {
   lostRefs: string[];
   lostRefItems: string[];
 };
+
+function hasBibtexField(lines: string[], field: string) {
+  return lines.some((line) => line.startsWith(`  ${field} = `));
+}
+
+function warnDuplicateBibtexField(
+  key: string,
+  source: string,
+  rawValue: string,
+  skipped: string[],
+  file?: VFile,
+) {
+  const detail = `${key}:${source} -> ${rawValue}`;
+  skipped.push(detail);
+  jatsFileWarn(file, 'Skipped duplicate field in bibtex conversion', {
+    source: 'jats-convert:references',
+    note: detail,
+  });
+}
+
+function appendSupplementToTitle(
+  lines: string[],
+  supplement: string,
+  key: string,
+  skipped: string[],
+  file?: VFile,
+) {
+  const titleIdx = lines.findIndex((line) => line.startsWith('  title = '));
+  if (titleIdx >= 0) {
+    lines[titleIdx] = lines[titleIdx].replace(/}$/, ` (${escapeBibtex(supplement)})}`);
+    jatsFileWarn(file, 'Supplement appended to title in bibtex conversion', {
+      source: 'jats-convert:references',
+      note: `${key}: ${supplement}`,
+    });
+  } else if (!hasBibtexField(lines, 'note')) {
+    lines.push(`  note = ${bibtexField(`Supplement: ${supplement}`)}`);
+    jatsFileWarn(file, 'Supplement added as note in bibtex conversion', {
+      source: 'jats-convert:references',
+      note: `${key}: ${supplement}`,
+    });
+  } else {
+    warnDuplicateBibtexField(key, 'supplement', supplement, skipped, file);
+  }
+}
 
 function bibtexFromCite(
   key: string,
@@ -85,28 +134,99 @@ function bibtexFromCite(
   const editors: string[] = [];
   let fpage: string | undefined;
   let lpage: string | undefined;
-  let maybeFpage: string | undefined;
+  let pagesValue: string | undefined;
   let patentTitle = '';
+  let supplementText = '';
+  // Stray text/markup between structured fields; accumulated and flushed (warn) at boundaries.
+  let orphanInlineText = '';
+  let webLinkSet = false;
   const skipped: string[] = [];
+
+  const setField = (field: string, formatted: string, source: string, raw: string): boolean => {
+    if (hasBibtexField(bibtexLines, field)) {
+      warnDuplicateBibtexField(key, source, raw, skipped, file);
+      return false;
+    }
+    bibtexLines.push(`  ${field} = ${formatted}`);
+    return true;
+  };
+
+  const addWebLink = (source: string, href: string) => {
+    if (webLinkSet || hasBibtexField(bibtexLines, 'url')) {
+      warnDuplicateBibtexField(key, source, href, skipped, file);
+      return;
+    }
+    bibtexLines.push(`  url = {${escapeBibtex(href)}}`);
+    webLinkSet = true;
+  };
+
+  const setPagesValue = (formattedValue: string, source: string, rawValue: string) => {
+    if (pagesValue) {
+      warnDuplicateBibtexField(key, source, rawValue, skipped, file);
+      return;
+    }
+    pagesValue = formattedValue;
+  };
+
+  const setPagesFromFpage = () => {
+    if (!fpage) return;
+    const formatted = `{${escapeBibtex(fpage)}${lpage ? `--${escapeBibtex(lpage)}` : ''}}`;
+    const raw = `${fpage}${lpage ? `--${lpage}` : ''}`;
+    setPagesValue(formatted, 'fpage', raw);
+  };
+
+  const flushInlineTextWarning = () => {
+    const text = orphanInlineText.trim();
+    orphanInlineText = '';
+    if (!text) return;
+    const detail = `${key}:text -> ${text}`;
+    skipped.push(detail);
+    jatsFileWarn(file, 'Skipped unsupported field in bibtex conversion', {
+      source: 'jats-convert:references',
+      note: detail,
+    });
+  };
+
   cite.children?.forEach((child) => {
     if (child.type === 'label') return;
     if (child.type === 'pub-id') return;
-    if (
-      child.type === 'text' &&
-      toText(child).match(/^([\s.;,:\-–()&]|p|ed|eds|in|and|st|nd|rd|th)*$/i)
-    )
+
+    if (child.type === 'text') {
+      const text = toText(child);
+      const pageMatch = text.match(/, ([0-9]+)\./);
+      if (pageMatch) {
+        flushInlineTextWarning();
+        setPagesValue(`{${escapeBibtex(pageMatch[1])}}`, 'text', pageMatch[1]);
+        return;
+      }
+      if (cite['publication-type'] === 'patent' && text.toLowerCase().includes('patent')) {
+        flushInlineTextWarning();
+        patentTitle = `${text}${patentTitle}`;
+        return;
+      }
+      if (text.match(CITATION_PUNCTUATION_ONLY)) return;
+      orphanInlineText += text;
       return;
+    }
+
+    if (CITATION_INLINE_MARKUP.includes(child.type)) {
+      orphanInlineText += toText(child);
+      return;
+    }
+
+    flushInlineTextWarning();
+
     if (child.type === 'article-title') {
       // This would be nicer if we did JATS -> LaTeX
-      bibtexLines.push(`  title = ${bibtexField(child)}`);
+      setField('title', bibtexField(child), 'article-title', toText(child));
     } else if (child.type === 'year') {
-      bibtexLines.push(`  year = ${bibtexField(child)}`);
+      setField('year', bibtexField(child), 'year', toText(child));
     } else if (child.type === 'source') {
       const field =
         entryType === 'book' ? 'title' : entryType === 'inbook' ? 'booktitle' : 'journal';
-      bibtexLines.push(`  ${field} = ${bibtexField(child)}`);
+      setField(field, bibtexField(child), 'source', toText(child));
     } else if (['part-title', 'chapter-title', 'data-title'].includes(child.type)) {
-      bibtexLines.push(`  title = ${bibtexField(child)}`);
+      setField('title', bibtexField(child), child.type, toText(child));
     } else if (child.type === 'patent') {
       // We need to improve this, there is critical patent info in text nodes...
       patentTitle = `${patentTitle}${toText(child)}`;
@@ -115,21 +235,84 @@ function bibtexFromCite(
     } else if (child.type === 'volume') {
       bibtexLines.push(`  volume = ${bibtexField(child)}`);
     } else if (child.type === 'conf-name') {
-      bibtexLines.push(`  booktitle = ${bibtexField(child)}`);
+      setField('booktitle', bibtexField(child), 'conf-name', toText(child));
     } else if (child.type === 'institution') {
       bibtexLines.push(`  institution = ${bibtexField(child)}`);
     } else if (child.type === 'uri') {
-      bibtexLines.push(`  howpublished = {\\url{${escapeBibtex(child['xlink:href'])}}}`);
-    } else if (child.type === 'date-in-citation') {
-      if (child['content-type'] === 'access-date') {
-        bibtexLines.push(`  note = {Accessed: ${escapeBibtex(child)}}`);
-      } else {
-        bibtexLines.push(`  note = ${bibtexField(child)}`);
+      const href = child['xlink:href'];
+      if (href) {
+        addWebLink('uri', href);
       }
+    } else if (child.type === 'ext-link') {
+      const href = child['xlink:href'];
+      if (
+        child['ext-link-type'] === 'doi' ||
+        (href && /doi\.org/i.test(href)) ||
+        (href && /^10\.\d+\//.test(href))
+      ) {
+        return;
+      }
+      if (href) {
+        addWebLink('ext-link', href);
+      }
+    } else if (child.type === 'month') {
+      setField('month', bibtexField(child), 'month', toText(child));
+    } else if (child.type === 'conf-date') {
+      const confYear = select('year', child);
+      const confMonth = select('month', child);
+      const iso = child['iso-8601-date'];
+      const isoMatch = typeof iso === 'string' ? iso.match(/^(\d{4})-(\d{2})/) : null;
+      const hasConfDateYear = !!confYear || !!isoMatch?.[1];
+
+      let confDateYearAccepted = false;
+      if (confYear) {
+        confDateYearAccepted = setField(
+          'year',
+          bibtexField(confYear),
+          'conf-date',
+          toText(confYear),
+        );
+      }
+      if (isoMatch?.[1]) {
+        const accepted = setField('year', `{${isoMatch[1]}}`, 'conf-date', isoMatch[1]);
+        confDateYearAccepted = confDateYearAccepted || accepted;
+      }
+
+      const addConfDateMonth = (formatted: string, raw: string) => {
+        if (hasConfDateYear && !confDateYearAccepted) {
+          warnDuplicateBibtexField(key, 'conf-date', raw, skipped, file);
+          return;
+        }
+        setField('month', formatted, 'conf-date', raw);
+      };
+
+      if (confMonth) {
+        addConfDateMonth(bibtexField(confMonth), toText(confMonth));
+      }
+      if (isoMatch?.[2]) {
+        addConfDateMonth(`{${isoMatch[2]}}`, isoMatch[2]);
+      }
+    } else if (child.type === 'page-range') {
+      setPagesValue(bibtexField(child), 'page-range', toText(child));
+    } else if (child.type === 'series') {
+      bibtexLines.push(`  series = ${bibtexField(child)}`);
+    } else if (child.type === 'issn') {
+      bibtexLines.push(`  issn = ${bibtexField(child)}`);
+    } else if (child.type === 'isbn') {
+      bibtexLines.push(`  isbn = ${bibtexField(child)}`);
+    } else if (child.type === 'supplement') {
+      supplementText = toText(child);
+    } else if (child.type === 'date-in-citation') {
+      const noteValue =
+        child['content-type'] === 'access-date'
+          ? `{Accessed: ${escapeBibtex(child)}}`
+          : bibtexField(child);
+      setField('note', noteValue, 'date-in-citation', toText(child));
     } else if (child.type === 'fpage') {
       fpage = toText(child);
     } else if (child.type === 'lpage') {
       lpage = toText(child);
+      setPagesFromFpage();
     } else if (child.type === 'edition') {
       bibtexLines.push(`  edition = ${bibtexField(child)}`);
     } else if (child.type === 'publisher-name') {
@@ -162,16 +345,15 @@ function bibtexFromCite(
       authors.push(bibtexField(child));
     } else if (child.type === 'etal') {
       authors.push('others');
-      // } else if (!['text', 'bold', 'italic', 'comment'].includes(child.type)) {
-    } else if (child.type === 'text') {
-      if (toText(child).match(/, [0-9]+\./)) {
-        maybeFpage = toText(child).slice(2, -1);
-      } else if (
-        cite['publication-type'] === 'patent' &&
-        toText(child).toLowerCase().includes('patent')
-      ) {
-        patentTitle = `${toText(child)}${patentTitle}`;
-      }
+    } else if (child.type === 'comment') {
+      const text = toText(child);
+      if (text.match(CITATION_PUNCTUATION_ONLY)) return;
+      const detail = `${key}:comment -> ${text}`;
+      skipped.push(detail);
+      jatsFileWarn(file, 'Skipped unsupported field in bibtex conversion', {
+        source: 'jats-convert:references',
+        note: detail,
+      });
     } else {
       const detail = `${key}:${child.type} -> ${toText(child)}`;
       skipped.push(detail);
@@ -181,13 +363,16 @@ function bibtexFromCite(
       });
     }
   });
-  if (patentTitle && !bibtexLines.find((line) => line.startsWith('  title = ')))
-    bibtexLines.push(`  title = ${bibtexField(patentTitle)}`);
-  if (maybeFpage && !fpage) fpage = maybeFpage;
-  if (fpage) {
-    bibtexLines.push(
-      `  pages = {${escapeBibtex(fpage)}${lpage ? `--${escapeBibtex(lpage)}` : ''}}`,
-    );
+  flushInlineTextWarning();
+  if (patentTitle) {
+    setField('title', bibtexField(patentTitle), 'patent', patentTitle);
+  }
+  if (supplementText) appendSupplementToTitle(bibtexLines, supplementText, key, skipped, file);
+  if (fpage && !pagesValue) {
+    setPagesFromFpage();
+  }
+  if (pagesValue) {
+    bibtexLines.push(`  pages = ${pagesValue}`);
   }
   if (authors.length) {
     bibtexLines.push(`  author = {${authors.join(' and ')}}`);
@@ -200,7 +385,7 @@ function bibtexFromCite(
   }
   if (bibtexLines.length === 1) {
     counts.unprocessed += 1;
-    bibtexLines.push(`  note = ${bibtexField(cite)}`);
+    setField('note', bibtexField(cite), 'cite', toText(cite));
   } else {
     counts.bibtex += 1;
     counts.lostRefItems.push(...skipped);
