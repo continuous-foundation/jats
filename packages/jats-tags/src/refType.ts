@@ -76,7 +76,10 @@ const REF_TYPE_ALIASES: Record<string, RefType> = {
 };
 
 function normalizeRefTypeKey(value: string): string {
-  return value.trim().toLowerCase().replace(/[\s_]+/g, '-');
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_]+/g, '-');
 }
 
 /** Map a raw `@ref-type` attribute to a {@link RefType}, if recognized. */

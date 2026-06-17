@@ -96,7 +96,7 @@ function resolveProofCore(opts: { id?: string; labelText?: string; declaredKind?
   const fromIdKind = kindFromId(opts.id);
   const fromIdEnumerator = enumeratorFromId(opts.id);
 
-  let kind = fromLabel.kind ?? fromDeclaredKind ?? fromIdKind;
+  const kind = fromLabel.kind ?? fromDeclaredKind ?? fromIdKind;
   let enumerator = fromLabel.enumerator ?? fromIdEnumerator;
 
   if (fromLabel.enumerator && fromIdEnumerator && fromLabel.enumerator !== fromIdEnumerator) {
