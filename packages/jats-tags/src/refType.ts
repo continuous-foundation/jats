@@ -55,3 +55,40 @@ export enum RefType {
   'media' = 'media',
   'video' = 'video',
 }
+
+const REF_TYPE_VALUES = new Set<string>(Object.values(RefType));
+
+/** Potential non-standard ref-type spellings seen in publisher JATS. */
+const REF_TYPE_ALIASES: Record<string, RefType> = {
+  figure: RefType.fig,
+  figures: RefType.fig,
+  tbl: RefType.table,
+  tables: RefType.table,
+  section: RefType.sec,
+  sections: RefType.sec,
+  equation: RefType.dispFormula,
+  equations: RefType.dispFormula,
+  eq: RefType.dispFormula,
+  formula: RefType.dispFormula,
+  formulas: RefType.dispFormula,
+  footnote: RefType.fn,
+  footnotes: RefType.fn,
+};
+
+function normalizeRefTypeKey(value: string): string {
+  return value.trim().toLowerCase().replace(/[\s_]+/g, '-');
+}
+
+/** Map a raw `@ref-type` attribute to a {@link RefType}, if recognized. */
+export function coerceRefType(value: string | undefined): RefType | undefined {
+  if (!value?.trim()) return undefined;
+  const trimmed = value.trim();
+  if (REF_TYPE_VALUES.has(trimmed)) {
+    return trimmed as RefType;
+  }
+  const normalized = normalizeRefTypeKey(trimmed);
+  if (REF_TYPE_VALUES.has(normalized)) {
+    return normalized as RefType;
+  }
+  return REF_TYPE_ALIASES[normalized];
+}

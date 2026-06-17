@@ -1,0 +1,48 @@
+cases:
+  - title: xref ref-type Table coerces to table cross-reference
+    jats: |-
+      <p>See <xref ref-type="Table" rid="tbl1">Table 1</xref>.</p>
+      <table-wrap id="tbl1"><label>Table 1</label><table><tbody><tr><td>x</td></tr></tbody></table></table-wrap>
+    mdast:
+      type: crossReference
+      kind: table
+      label: tbl1
+      identifier: tbl1
+      children:
+        - type: text
+          value: Table 1
+    expect_no_warn_contains:
+      - Unknown xref ref-type
+
+  - title: xref ref-type figure coerces to fig cross-reference
+    jats: |-
+      <p>See <xref ref-type="figure" rid="fig1">Figure 1</xref>.</p>
+      <fig id="fig1"><label>Figure 1</label><graphic xlink:href="f.tif"/></fig>
+    mdast:
+      type: crossReference
+      kind: figure
+      label: fig1
+      identifier: fig1
+    expect_no_warn_contains:
+      - Unknown xref ref-type
+
+  - title: xref ref-type Section coerces to sec cross-reference
+    jats: |-
+      <p>See <xref ref-type="Section" rid="sec1">Methods</xref>.</p>
+      <sec id="sec1"><title>Methods</title><p>Text.</p></sec>
+    mdast:
+      type: crossReference
+      kind: heading
+      label: sec1
+      identifier: sec1
+    expect_no_warn_contains:
+      - Unknown xref ref-type
+
+  - title: xref ref-type aff still warns as unknown
+    jats: |-
+      <p><xref ref-type="aff" rid="aff1">Affiliation</xref></p>
+    mdast:
+      type: crossReference
+      identifier: aff1
+    expect_warn_contains:
+      - Unknown xref ref-type

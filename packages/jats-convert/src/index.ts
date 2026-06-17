@@ -10,7 +10,7 @@ import { Jats } from 'jats-xml';
 import { select, selectAll } from 'unist-util-select';
 import { u } from 'unist-builder';
 import type { Body, License, LinkMixin } from 'jats-tags';
-import { RefType } from 'jats-tags';
+import { RefType, coerceRefType } from 'jats-tags';
 import type { ISession } from 'jats-xml';
 import type { Handler, IJatsParser, JatsResult, Options, StateData } from './types.js';
 import { mathHandlers } from './math.js';
@@ -496,9 +496,12 @@ const handlers: Record<string, Handler> = {
     state.closeNode();
   },
   xref(node, state) {
-    const refType: RefType = node['ref-type'];
+    const rawRefType = node['ref-type'];
+    const refType = coerceRefType(typeof rawRefType === 'string' ? rawRefType : undefined);
     if (!node.rid) {
-      state.warn('xref missing rid', 'xref', { note: `ref-type=${refType}` });
+      state.warn('xref missing rid', 'xref', {
+        note: `ref-type=${rawRefType ?? refType ?? ''}`,
+      });
     }
     const { label, identifier } = normalizeLabel(node.rid) ?? {};
     switch (refType) {
@@ -531,7 +534,9 @@ const handlers: Record<string, Handler> = {
       }
       default: {
         state.renderInline(node, 'crossReference', { identifier: node.rid });
-        state.warn('Unknown xref ref-type', 'xref', { note: `ref-type=${refType}` });
+        state.warn('Unknown xref ref-type', 'xref', {
+          note: `ref-type=${rawRefType ?? refType ?? ''}`,
+        });
         return;
       }
     }
