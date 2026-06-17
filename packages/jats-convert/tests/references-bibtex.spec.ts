@@ -197,6 +197,19 @@ describe('bibtex field conversion', () => {
     );
     expect(warnMessages(vfile).some((n) => n.includes(':text ->'))).toBe(false);
   });
+
+  test('typographic quote punctuation in citation text does not warn', () => {
+    const { vfile } = bibtexForRef(
+      REF_WRAPPER(`<element-citation publication-type="journal">
+        <article-title>Example</article-title>
+        <year>2020</year>
+        &#x201C;
+        <source>Journal</source>
+        &#x201D;.
+      </element-citation>`),
+    );
+    expect(warnMessages(vfile).some((n) => n.includes(':text ->'))).toBe(false);
+  });
 });
 
 describe('duplicate bibtex field prioritization', () => {

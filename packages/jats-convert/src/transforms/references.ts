@@ -62,7 +62,9 @@ const BIBTEX_TYPE: Record<string, string> = {
 };
 
 const CITATION_INLINE_MARKUP = ['italic', 'bold', 'sup', 'sub', 'sc', 'underline', 'strike'];
-const CITATION_PUNCTUATION_ONLY = /^([\s.;,:\-–()&]|p|ed|eds|in|and|st|nd|rd|th)*$/i;
+/** Bare text/comment nodes that carry only separators, not bibliographic content. */
+const CITATION_PUNCTUATION_ONLY =
+  /^([\s.;,:\-–()&"'«»‹›\u201c\u201d\u2018\u2019]|p|ed|eds|in|and|st|nd|rd|th)*$/i;
 
 type Counts = {
   dois: number;
