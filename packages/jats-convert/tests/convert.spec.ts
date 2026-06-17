@@ -30,6 +30,7 @@ import { treeContainsPartial } from './helpers/mdastPartial';
 // re-runs when a `.yml` changes (runtime `fs.readFileSync` is invisible to the watcher).
 // Keep this map in sync with the directory — the guard below fails loudly otherwise.
 import abstractDescriptionYml from './abstract-description.yml' with { type: 'text' };
+import abstractYml from './abstract.yml' with { type: 'text' };
 import basicYml from './basic.yml' with { type: 'text' };
 import boxedtextYml from './boxedtext.yml' with { type: 'text' };
 import figuresYml from './figures.yml' with { type: 'text' };
@@ -45,6 +46,7 @@ import xrefYml from './xref.yml' with { type: 'text' };
 
 const YAML_FIXTURES: Record<string, string> = {
   'abstract-description.yml': abstractDescriptionYml,
+  'abstract.yml': abstractYml,
   'basic.yml': basicYml,
   'boxedtext.yml': boxedtextYml,
   'figures.yml': figuresYml,
@@ -124,24 +126,24 @@ describe('JATS → mdast (YAML fixtures)', () => {
           expect(frontmatter.description).toBeUndefined();
         }
         if (c.expect_warn_contains?.length) {
-          const reasons = vfile.messages
+          const messages = vfile.messages
             .filter((m) => m.fatal === false)
-            .map((m) => m.reason ?? '');
+            .map((m) => `${m.reason ?? ''}${m.note ? `: ${m.note}` : ''}`);
           for (const fragment of c.expect_warn_contains) {
             expect(
-              reasons.some((r) => r.includes(fragment)),
-              `Expected warning containing "${fragment}"; got: ${reasons.join(' | ') || '(none)'}`,
+              messages.some((r) => r.includes(fragment)),
+              `Expected warning containing "${fragment}"; got: ${messages.join(' | ') || '(none)'}`,
             ).toBe(true);
           }
         }
         if (c.expect_no_warn_contains?.length) {
-          const reasons = vfile.messages
+          const messages = vfile.messages
             .filter((m) => m.fatal === false)
-            .map((m) => m.reason ?? '');
+            .map((m) => `${m.reason ?? ''}${m.note ? `: ${m.note}` : ''}`);
           for (const fragment of c.expect_no_warn_contains) {
             expect(
-              reasons.some((r) => r.includes(fragment)),
-              `Expected no warning containing "${fragment}"; got: ${reasons.join(' | ') || '(none)'}`,
+              messages.some((r) => r.includes(fragment)),
+              `Expected no warning containing "${fragment}"; got: ${messages.join(' | ') || '(none)'}`,
             ).toBe(false);
           }
         }
