@@ -48,12 +48,17 @@ import {
   statementMetadataChildTypes,
 } from './statement.js';
 import {
+  artifactFileLinkProps,
   captionFromSupplementary,
   isFigureMediaUrl,
-  mimeTypeFromMedia,
   supplementaryFileLinkLabel,
   unhandledSupplementaryChildTypes,
 } from './supplementary.js';
+
+function linkPropsForHref(url: string | undefined, media?: GenericNode) {
+  const file = artifactFileLinkProps(url, media);
+  return file ? { url, ...file } : { url };
+}
 
 function refTypeToReferenceKind(kind?: RefType): string | undefined {
   switch (kind) {
@@ -601,16 +606,11 @@ const handlers: Record<string, Handler> = {
       }
       withUrl.forEach((item) => {
         const url = item['xlink:href'] as string;
-        const contentType = mimeTypeFromMedia(item);
         if (withUrl.length > 1) {
           state.openNode('listItem');
         }
         state.openNode('paragraph');
-        state.openNode('link', {
-          url,
-          static: true,
-          data: contentType ? { contentType } : undefined,
-        });
+        state.openNode('link', linkPropsForHref(url, item));
         state.text(supplementaryFileLinkLabel({ media: item, url, groupLabel, singleFile }));
         state.closeNode();
         state.closeNode();
@@ -687,10 +687,10 @@ const handlers: Record<string, Handler> = {
     }
   },
   media(node, state) {
-    state.renderInline(node, 'link', { url: node['xlink:href'] });
+    state.renderInline(node, 'link', linkPropsForHref(node['xlink:href'], node));
   },
   ['inline-supplementary-material'](node, state) {
-    state.renderInline(node, 'link', { url: node['xlink:href'] });
+    state.renderInline(node, 'link', linkPropsForHref(node['xlink:href'], node));
   },
   caption(node, state) {
     state.renderChildren(node);

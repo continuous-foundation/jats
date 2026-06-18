@@ -161,3 +161,72 @@ cases:
               children:
                 - type: text
                   value: Supplemental table 6
+
+  - source: supplementary-external-file-url
+    title: supplementary file media with absolute http href is not marked static
+    jats: |-
+      <supplementary-material id="S1">
+        <media xlink:href="https://example.com/data.zip" mimetype="application" mime-subtype="zip"/>
+      </supplementary-material>
+    mdast:
+      type: div
+      identifier: s1
+      children:
+        - type: paragraph
+          children:
+            - type: link
+              url: https://example.com/data.zip
+              children:
+                - type: text
+                  value: Supplementary file (zip)
+
+  - source: inline-supplementary-material-file
+    title: inline supplementary material with relative file path is a static download link
+    jats: |-
+      <p>
+        <inline-supplementary-material xlink:href="supplements/729869_file02.pdf"/>
+      </p>
+    mdast:
+      type: paragraph
+      children:
+        - type: link
+          url: supplements/729869_file02.pdf
+          static: true
+          children: []
+
+  - source: bare-media-file-link
+    title: bare media with relative non-image href is a static download link
+    jats: |-
+      <p><media xlink:href="supplements/data.csv" mimetype="text" mime-subtype="csv"/></p>
+    mdast:
+      type: paragraph
+      children:
+        - type: link
+          url: supplements/data.csv
+          static: true
+          data:
+            contentType: text/csv
+          children: []
+
+  - source: bare-media-figure-url-is-static
+    title: bare media with relative image href is a static link (not promoted to image node)
+    jats: |-
+      <p><media xlink:href="supplements/fig-s1.png"/></p>
+    mdast:
+      type: paragraph
+      children:
+        - type: link
+          url: supplements/fig-s1.png
+          static: true
+          children: []
+
+  - source: uri-relative-image-unchanged
+    title: uri handler is unchanged (no static marking in this pass)
+    jats: |-
+      <p><uri xlink:href="supplements/fig-s1.png"/></p>
+    mdast:
+      type: paragraph
+      children:
+        - type: link
+          url: supplements/fig-s1.png
+          children: []
