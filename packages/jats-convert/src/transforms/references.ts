@@ -181,7 +181,7 @@ function bibtexFromCite(
     if (!text) return;
     const detail = `${key}:text -> ${text}`;
     skipped.push(detail);
-    jatsFileWarn(file, 'Skipped unsupported field in bibtex conversion', {
+    jatsFileWarn(file, 'Skipped unstructured citation text in bibtex conversion', {
       source: 'jats-convert:references',
       note: detail,
     });
