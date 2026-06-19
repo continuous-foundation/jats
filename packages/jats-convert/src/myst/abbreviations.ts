@@ -96,7 +96,13 @@ export function abbreviationsFromText(text: string): Record<string, string> {
           possibilities = exploreAbbrPossibilities(letter.toLowerCase(), possibilities);
         });
       if (possibilities.filter(({ next }) => next.length === 0).length) {
-        abbreviations[abbr] = possibleWords.slice(i).join(' ');
+        const expansion = possibleWords.slice(i).join(' ');
+        // Supplementary-style labels (e.g. segments (S1-S3)) are not phrase abbreviations.
+        const multiWordOrHyphenated = expansion.includes(' ') || expansion.includes('-');
+        if (!multiWordOrHyphenated && abbr.includes('-')) {
+          continue;
+        }
+        abbreviations[abbr] = expansion;
         break;
       }
     }
