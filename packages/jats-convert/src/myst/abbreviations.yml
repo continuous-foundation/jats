@@ -88,3 +88,14 @@ cases:
   - title: Curly-quoted label in parens is not an abbreviation
     text: test set (“Test”)
     abbreviations: {}
+  - title: Supplementary segment labels are not abbreviations
+    text: segments (S1-S3)
+    abbreviations: {}
+  - title: Hyphenated single word with hyphenated abbreviation is parsed
+    text: Hello-World (H-W)
+    abbreviations:
+      H-W: Hello-World
+  - title: Hyphenated single word with hyphenated abbreviation is parsed
+    text: Hello World (H-W)
+    abbreviations:
+      H-W: Hello World
