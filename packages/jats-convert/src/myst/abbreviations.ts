@@ -102,6 +102,9 @@ export function abbreviationsFromText(text: string): Record<string, string> {
         if (!multiWordOrHyphenated && abbr.includes('-')) {
           continue;
         }
+        if (abbr.toLowerCase() === expansion.toLowerCase()) {
+          continue;
+        }
         abbreviations[abbr] = expansion;
         break;
       }

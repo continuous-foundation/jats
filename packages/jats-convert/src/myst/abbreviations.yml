@@ -99,3 +99,6 @@ cases:
     text: Hello World (H-W)
     abbreviations:
       H-W: Hello World
+  - title: Repeated word in parens is not an abbreviation
+    text: domain (domain)
+    abbreviations: {}
