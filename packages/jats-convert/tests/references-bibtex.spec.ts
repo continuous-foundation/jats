@@ -36,6 +36,15 @@ function hasDuplicateFieldWarning(vfile: VFile, source: string): boolean {
   );
 }
 
+function hasInlineTextWarning(vfile: VFile, text?: string): boolean {
+  return vfile.messages.some(
+    (m) =>
+      m.fatal === false &&
+      m.reason === 'Skipped unstructured citation text in bibtex conversion' &&
+      (text ? (m.note?.includes(text) ?? false) : true),
+  );
+}
+
 const REF_WRAPPER = (citation: string) =>
   `<article><body></body><back><ref-list><ref id="r1"><label>1.</label>${citation}</ref></ref-list></back></article>`;
 
@@ -163,7 +172,7 @@ describe('bibtex field conversion', () => {
     expect(warnMessages(vfile).some((n) => n.includes('comment ->'))).toBe(false);
   });
 
-  test('bare citation text warns as unsupported field', () => {
+  test('bare citation text warns as unstructured text', () => {
     const { vfile } = bibtexForRef(
       REF_WRAPPER(`<element-citation publication-type="journal">
         <article-title>Example</article-title>
@@ -171,9 +180,7 @@ describe('bibtex field conversion', () => {
         Available from publisher archive
       </element-citation>`),
     );
-    expect(warnMessages(vfile).some((n) => n.includes('Available from publisher archive'))).toBe(
-      true,
-    );
+    expect(hasInlineTextWarning(vfile, 'Available from publisher archive')).toBe(true);
   });
 
   test('bare citation text includes adjacent inline markup in warning', () => {
@@ -184,7 +191,7 @@ describe('bibtex field conversion', () => {
         bare text <italic>with italic</italic>
       </mixed-citation>`),
     );
-    expect(warnMessages(vfile).some((n) => n.includes('text -> bare text with italic'))).toBe(true);
+    expect(hasInlineTextWarning(vfile, 'text -> bare text with italic')).toBe(true);
   });
 
   test('punctuation-only citation text does not warn', () => {
@@ -195,7 +202,7 @@ describe('bibtex field conversion', () => {
         ; pp. 
       </element-citation>`),
     );
-    expect(warnMessages(vfile).some((n) => n.includes(':text ->'))).toBe(false);
+    expect(hasInlineTextWarning(vfile)).toBe(false);
   });
 
   test('typographic quote punctuation in citation text does not warn', () => {
@@ -208,7 +215,7 @@ describe('bibtex field conversion', () => {
         &#x201D;.
       </element-citation>`),
     );
-    expect(warnMessages(vfile).some((n) => n.includes(':text ->'))).toBe(false);
+    expect(hasInlineTextWarning(vfile)).toBe(false);
   });
 });
 
