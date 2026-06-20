@@ -217,6 +217,87 @@ describe('bibtex field conversion', () => {
     );
     expect(hasInlineTextWarning(vfile)).toBe(false);
   });
+
+  test('inline ISSN and URL doi from mixed-citation text', () => {
+    const { bib, vfile } = bibtexForRef(
+      REF_WRAPPER(`<mixed-citation publication-type="journal">
+        <string-name><given-names>Z.</given-names> <surname>Lin</surname></string-name>.
+        <article-title>Evolutionary-scale prediction</article-title>.
+        <source>Science</source>, <volume>379</volume>(<issue>6637</issue>):<fpage>1123</fpage>&#x2013;<lpage>1130</lpage>, <month>Mar</month>.
+        <year>2023</year>. ISSN 1095-9203. doi: <pub-id pub-id-type="doi">10.1126/science.ade2574</pub-id>. URL 10.1126/science.ade2574.
+      </mixed-citation>`),
+    );
+    expect(bib).toContain('issn = {1095-9203}');
+    expect(bib).toContain('doi = {10.1126/science.ade2574}');
+    expect(bibFieldCount(bib, 'doi')).toBe(1);
+    expect(bibFieldCount(bib, 'issn')).toBe(1);
+    expect(hasInlineTextWarning(vfile)).toBe(false);
+    expect(hasDuplicateFieldWarning(vfile, 'text')).toBe(false);
+  });
+
+  test('inline URL with https sets url field', () => {
+    const { bib } = bibtexForRef(
+      REF_WRAPPER(`<mixed-citation publication-type="journal">
+        <article-title>Example</article-title>
+        <year>2020</year>
+        URL https://example.com/paper.
+      </mixed-citation>`),
+    );
+    expect(bib).toContain('url = {https://example.com/paper}');
+  });
+
+  test('inline issn/url/doi labels are case- and colon-insensitive', () => {
+    const { bib, vfile } = bibtexForRef(
+      REF_WRAPPER(`<mixed-citation publication-type="journal">
+        <article-title>Example</article-title>
+        <year>2020</year>
+        issn: 1234-5678. DOI 10.1000/example. url: https://example.org/ref.
+      </mixed-citation>`),
+    );
+    expect(bib).toContain('issn = {1234-5678}');
+    expect(bib).toContain('doi = {10.1000/example}');
+    expect(bib).toContain('url = {https://example.org/ref}');
+    expect(hasInlineTextWarning(vfile)).toBe(false);
+  });
+
+  test('comma-separated inline issns are combined in one bibtex field', () => {
+    const { bib, vfile } = bibtexForRef(
+      REF_WRAPPER(`<mixed-citation publication-type="journal">
+        <article-title>Example</article-title>
+        <volume>19</volume>(<issue>2</issue>):<fpage>306</fpage>&#x2013;<lpage>314</lpage>, <month>Jan</month>.
+        <year>2000</year>. ISSN 0261-4189, 1460-2075. doi: <pub-id pub-id-type="doi">10.1093/emboj/19.2.306</pub-id>
+      </mixed-citation>`),
+    );
+    expect(bib).toContain('issn = {0261-4189, 1460-2075}');
+    expect(bibFieldCount(bib, 'issn')).toBe(1);
+    expect(hasInlineTextWarning(vfile)).toBe(false);
+  });
+
+  test('inline isbn is extracted from mixed-citation text', () => {
+    const { bib, vfile } = bibtexForRef(
+      REF_WRAPPER(`<mixed-citation publication-type="book">
+        <article-title>Example</article-title>
+        <year>2013</year>. ISBN 9783642374562. doi: <pub-id pub-id-type="doi">10.1007/978-3-642-37456-2</pub-id>
+      </mixed-citation>`),
+    );
+    expect(bib).toContain('isbn = {9783642374562}');
+    expect(bibFieldCount(bib, 'isbn')).toBe(1);
+    expect(hasInlineTextWarning(vfile)).toBe(false);
+  });
+
+  test('broken URL doi after pub-id keeps structured doi and warns on conflict', () => {
+    const { bib, vfile } = bibtexForRef(
+      REF_WRAPPER(`<mixed-citation publication-type="journal">
+        <article-title>Example</article-title>
+        <year>1973</year>.
+        <pub-id pub-id-type="doi">10.1126/science.181.4096.223</pub-id>. URL 10.1126/science. 181.4096.223.
+      </mixed-citation>`),
+    );
+    expect(bib).toContain('doi = {10.1126/science.181.4096.223}');
+    expect(bibFieldCount(bib, 'doi')).toBe(1);
+    expect(hasDuplicateFieldWarning(vfile, 'text')).toBe(true);
+    expect(hasInlineTextWarning(vfile, '181.4096.223')).toBe(true);
+  });
 });
 
 describe('duplicate bibtex field prioritization', () => {
@@ -428,5 +509,31 @@ describe('duplicate bibtex field prioritization', () => {
     expect(bib).not.toContain('Supplement: Table S1');
     expect(bibFieldCount(bib, 'note')).toBe(1);
     expect(hasDuplicateFieldWarning(vfile, 'supplement')).toBe(true);
+  });
+
+  test('identical duplicate url does not warn', () => {
+    const { bib, vfile } = bibtexForRef(
+      REF_WRAPPER(`<element-citation publication-type="web">
+        <article-title>Site</article-title>
+        <uri xlink:href="http://a.com"/>
+        <uri xlink:href="http://a.com"/>
+      </element-citation>`),
+    );
+    expect(bib).toContain('url = {http://a.com}');
+    expect(bibFieldCount(bib, 'url')).toBe(1);
+    expect(hasDuplicateFieldWarning(vfile, 'uri')).toBe(false);
+  });
+
+  test('identical duplicate year does not warn', () => {
+    const { bib, vfile } = bibtexForRef(
+      REF_WRAPPER(`<element-citation publication-type="journal">
+        <article-title>Example</article-title>
+        <year>2020</year>
+        <year>2020</year>
+      </element-citation>`),
+    );
+    expect(bib).toContain('year = {2020}');
+    expect(bibFieldCount(bib, 'year')).toBe(1);
+    expect(hasDuplicateFieldWarning(vfile, 'year')).toBe(false);
   });
 });

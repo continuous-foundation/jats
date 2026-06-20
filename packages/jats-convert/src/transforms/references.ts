@@ -1,6 +1,7 @@
 import 'dotenv/config.js';
 import fs from 'node:fs';
 import path from 'node:path';
+import { doi as doiUtils } from 'doi-utils';
 import { convertPMIDs2DOIs, normalizePMID } from 'jats-fetch';
 import type { Body, Reference } from 'jats-tags';
 import type { GenericNode, GenericParent } from 'myst-common';
@@ -78,6 +79,141 @@ function hasBibtexField(lines: string[], field: string) {
   return lines.some((line) => line.startsWith(`  ${field} = `));
 }
 
+function bibtexFieldRawValue(lines: string[], field: string): string | undefined {
+  const line = lines.find((l) => l.startsWith(`  ${field} = `));
+  if (!line) return undefined;
+  const braced = line.match(/^  \w+ = \{(.+)\}$/);
+  if (!braced) return undefined;
+  return braced[1].replace(/\\([\\{}$%#&_^~])/g, '$1');
+}
+
+/** Strip trailing punctuation, then normalize via doi-utils. Returns lowercase for stable bibtex compare. */
+function normalizeDoi(value: string): string | undefined {
+  const trimmed = value.trim().replace(/[.,;:]+$/, '');
+  const normalized = doiUtils.normalize(trimmed);
+  return normalized?.toLowerCase();
+}
+
+function doisMatch(a: string, b: string): boolean {
+  const left = normalizeDoi(a);
+  const right = normalizeDoi(b);
+  return !!left && !!right && left === right;
+}
+
+function normalizeIssn(value: string): string {
+  return value.replace(/[\s-]/g, '').toUpperCase();
+}
+
+function normalizeIsbn(value: string): string {
+  return value.replace(/[\s-]/g, '').toUpperCase();
+}
+
+function bibtexFieldValuesMatch(field: string, rawA: string, rawB: string): boolean {
+  const a = rawA.trim();
+  const b = rawB.trim();
+  if (field === 'doi') return doisMatch(a, b);
+  if (field === 'issn') return normalizeIssn(a) === normalizeIssn(b);
+  if (field === 'isbn') return normalizeIsbn(a) === normalizeIsbn(b);
+  return a === b;
+}
+
+/**
+ * Classify a bare URL-token from inline citation text (after the `URL` label).
+ * e.g. `https://example.com/paper` → url; `10.1126/science.` → doi
+ */
+function classifyLinkToken(value: string): 'doi' | 'url' | null {
+  const trimmed = value.trim().replace(/[.,;:]+$/, '');
+  if (/^https?:\/\//i.test(trimmed)) return 'url';
+  if (normalizeDoi(trimmed)) return 'doi';
+  return null;
+}
+
+/** ISSN label - e.g. `ISSN 0261-4189, 1460 2075`, `issn: 1234-5678` */
+const ISSN_SINGLE = String.raw`\d{4}[- ]?\d{3}[\dXx]|\d{4}[- ]?\d{4}`;
+const ISSN_INLINE_PATTERN = new RegExp(
+  String.raw`\bISSN\s*:?\s*((?:${ISSN_SINGLE})(?:\s*,\s*(?:${ISSN_SINGLE}))*)`,
+  'gi',
+);
+
+/** ISBN label - e.g. `ISBN 9783642374562`, `isbn: 978-0-123456-78-9, 0-123456-78-9` */
+const ISBN_SINGLE = String.raw`\d{13}|\d{9}[\dXx]|\d{1,5}(?:[- ]\d+){1,5}[\dXx]`;
+const ISBN_INLINE_PATTERN = new RegExp(
+  String.raw`\bISBN\s*:?\s*((?:${ISBN_SINGLE})(?:\s*,\s*(?:${ISBN_SINGLE}))*)`,
+  'gi',
+);
+
+/** URL label — captures one non-whitespace token e.g. `URL 10.1126/science.` */
+const URL_INLINE_PATTERN = /\bURL\s*:?\s*(\S+)/gi;
+
+/** doi label in text — e.g. `doi: 10.1093/emboj/19.2.306` */
+const DOI_INLINE_PATTERN = /\bdoi\s*:?\s*(10\.\d{4,}\/[^\s,;]+)/gi;
+
+/** Leftover field labels after extraction — e.g. trailing `doi:` with no value */
+const INLINE_FIELD_LABEL_PATTERN = /\b(?:doi|url|issn|isbn)\s*:?\s*/gi;
+
+function joinUniqueList(
+  values: string[],
+  keyOf: (formatted: string) => string,
+  format: (value: string) => string,
+): string {
+  const seen = new Set<string>();
+  const ordered: string[] = [];
+  for (const value of values) {
+    const formatted = format(value);
+    const key = keyOf(formatted);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    ordered.push(formatted);
+  }
+  return ordered.join(', ');
+}
+
+/**
+ * Pull issn/isbn/url/doi tokens out of orphan mixed-citation text.
+ * Unrecognized remainder will be warned as unstructured text by the caller.
+ */
+function extractInlineCitationFields(text: string): {
+  remainder: string;
+  issns: string[];
+  isbns: string[];
+  urlTokens: string[];
+  dois: string[];
+} {
+  let remainder = text;
+  const issns: string[] = [];
+  const isbns: string[] = [];
+  const urlTokens: string[] = [];
+  const dois: string[] = [];
+
+  remainder = remainder.replace(ISSN_INLINE_PATTERN, (_, group: string) => {
+    const parts = group.match(new RegExp(ISSN_SINGLE, 'gi')) ?? [];
+    for (const issn of parts) {
+      issns.push(issn.replace(/\s+/g, '-'));
+    }
+    return '';
+  });
+  remainder = remainder.replace(ISBN_INLINE_PATTERN, (_, group: string) => {
+    const parts = group.match(new RegExp(ISBN_SINGLE, 'gi')) ?? [];
+    for (const isbn of parts) {
+      isbns.push(isbn.trim());
+    }
+    return '';
+  });
+  remainder = remainder.replace(URL_INLINE_PATTERN, (_, url: string) => {
+    urlTokens.push(url);
+    return '';
+  });
+  remainder = remainder.replace(DOI_INLINE_PATTERN, (_, d: string) => {
+    dois.push(d.replace(/[.,;:]+$/, ''));
+    return '';
+  });
+  remainder = remainder
+    .replace(INLINE_FIELD_LABEL_PATTERN, '')
+    .replace(/^[\s.,;:]+|[\s.,;:]+$/g, '')
+    .trim();
+  return { remainder, issns, isbns, urlTokens, dois };
+}
+
 function warnDuplicateBibtexField(
   key: string,
   source: string,
@@ -140,10 +276,13 @@ function bibtexFromCite(
   // Stray text/markup between structured fields; accumulated and flushed (warn) at boundaries.
   let orphanInlineText = '';
   let webLinkSet = false;
+  let bibtexDoi = doi;
   const skipped: string[] = [];
 
   const setField = (field: string, formatted: string, source: string, raw: string): boolean => {
     if (hasBibtexField(bibtexLines, field)) {
+      const existing = bibtexFieldRawValue(bibtexLines, field);
+      if (existing != null && bibtexFieldValuesMatch(field, raw, existing)) return false;
       warnDuplicateBibtexField(key, source, raw, skipped, file);
       return false;
     }
@@ -151,17 +290,40 @@ function bibtexFromCite(
     return true;
   };
 
+  const trySetDoi = (source: string, raw: string): boolean => {
+    const cleaned = normalizeDoi(raw);
+    if (!cleaned) return false;
+    if (bibtexDoi) {
+      if (doisMatch(bibtexDoi, raw)) return false;
+      warnDuplicateBibtexField(key, source, raw, skipped, file);
+      return false;
+    }
+    if (hasBibtexField(bibtexLines, 'doi')) {
+      const existing = bibtexFieldRawValue(bibtexLines, 'doi');
+      if (existing != null && doisMatch(existing, raw)) return false;
+      warnDuplicateBibtexField(key, source, raw, skipped, file);
+      return false;
+    }
+    bibtexLines.push(`  doi = ${bibtexField(cleaned)}`);
+    bibtexDoi = cleaned;
+    return true;
+  };
+
   const addWebLink = (source: string, href: string) => {
+    const cleaned = href.trim().replace(/[.,;:]+$/, '');
     if (webLinkSet || hasBibtexField(bibtexLines, 'url')) {
+      const existing = bibtexFieldRawValue(bibtexLines, 'url');
+      if (existing != null && bibtexFieldValuesMatch('url', cleaned, existing)) return;
       warnDuplicateBibtexField(key, source, href, skipped, file);
       return;
     }
-    bibtexLines.push(`  url = {${escapeBibtex(href)}}`);
+    bibtexLines.push(`  url = {${escapeBibtex(cleaned)}}`);
     webLinkSet = true;
   };
 
   const setPagesValue = (formattedValue: string, source: string, rawValue: string) => {
     if (pagesValue) {
+      if (bibtexFieldValuesMatch('pages', rawValue, pagesValue.replace(/^\{|\}$/g, ''))) return;
       warnDuplicateBibtexField(key, source, rawValue, skipped, file);
       return;
     }
@@ -175,16 +337,42 @@ function bibtexFromCite(
     setPagesValue(formatted, 'fpage', raw);
   };
 
-  const flushInlineTextWarning = () => {
-    const text = orphanInlineText.trim();
-    orphanInlineText = '';
-    if (!text) return;
-    const detail = `${key}:text -> ${text}`;
+  const applyInlineCitationText = (text: string) => {
+    const { remainder, issns, isbns, urlTokens, dois } = extractInlineCitationFields(text);
+    if (issns.length) {
+      const combined = joinUniqueList(issns, normalizeIssn, (v) => v.replace(/\s+/g, '-'));
+      setField('issn', bibtexField(combined), 'text', combined);
+    }
+    if (isbns.length) {
+      const combined = joinUniqueList(isbns, normalizeIsbn, (v) => v.replace(/\s+/g, ' ').trim());
+      setField('isbn', bibtexField(combined), 'text', combined);
+    }
+    for (const inlineDoi of dois) {
+      trySetDoi('text', inlineDoi);
+    }
+    for (const token of urlTokens) {
+      const kind = classifyLinkToken(token);
+      if (kind === 'doi') {
+        trySetDoi('text', token);
+      } else if (kind === 'url') {
+        addWebLink('text', token);
+      }
+    }
+    const leftover = remainder.trim();
+    if (!leftover) return;
+    const detail = `${key}:text -> ${leftover}`;
     skipped.push(detail);
     jatsFileWarn(file, 'Skipped unstructured citation text in bibtex conversion', {
       source: 'jats-convert:references',
       note: detail,
     });
+  };
+
+  const flushInlineTextWarning = () => {
+    const text = orphanInlineText.trim();
+    orphanInlineText = '';
+    if (!text) return;
+    applyInlineCitationText(text);
   };
 
   cite.children?.forEach((child) => {
@@ -297,9 +485,9 @@ function bibtexFromCite(
     } else if (child.type === 'series') {
       bibtexLines.push(`  series = ${bibtexField(child)}`);
     } else if (child.type === 'issn') {
-      bibtexLines.push(`  issn = ${bibtexField(child)}`);
+      setField('issn', bibtexField(child), 'issn', toText(child));
     } else if (child.type === 'isbn') {
-      bibtexLines.push(`  isbn = ${bibtexField(child)}`);
+      setField('isbn', bibtexField(child), 'isbn', toText(child));
     } else if (child.type === 'supplement') {
       supplementText = toText(child);
     } else if (child.type === 'date-in-citation') {
@@ -380,8 +568,9 @@ function bibtexFromCite(
   if (editors.length) {
     bibtexLines.push(`  editor = {${editors.join(' and ')}}`);
   }
-  if (doi) {
-    bibtexLines.push(`  doi = ${bibtexField(doi)}`);
+  if (bibtexDoi && !hasBibtexField(bibtexLines, 'doi')) {
+    const normalized = normalizeDoi(bibtexDoi);
+    if (normalized) bibtexLines.push(`  doi = ${bibtexField(normalized)}`);
   }
   if (bibtexLines.length === 1) {
     counts.unprocessed += 1;
@@ -416,14 +605,14 @@ function processRefCite(
   let doi: string | undefined;
   const doiElement = select('ext-link,[pub-id-type=doi]', cite);
   if (doiElement) {
-    doi = toText(doiElement);
+    doi = normalizeDoi(toText(doiElement));
   }
   if (!doi) {
     const doiMatch = selectAll('text', cite)
       .map((node) => toText(node).match(/10.[0-9]+\/\S+/))
       .find((match) => !!match);
     if (doiMatch) {
-      doi = doiMatch[0];
+      doi = normalizeDoi(doiMatch[0]);
     }
   }
   if (!doi) {
