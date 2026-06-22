@@ -1,0 +1,22 @@
+<article>
+  <front>
+    <article-meta>
+      <title-group>
+        <article-title>Some title</article-title>
+      </title-group>
+      <contrib-group>
+        <contrib contrib-type="author">
+          <name>
+            <surname>Wang</surname>
+          </name>
+        </contrib>
+      </contrib-group>
+      <abstract>
+        <p>Some abstract.</p>
+      </abstract>
+    </article-meta>
+  </front>
+  <body>
+    <p>Some text.</p>
+  </body>
+</article>
