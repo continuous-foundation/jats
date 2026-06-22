@@ -19,6 +19,9 @@
     "lib": ["es2022", "DOM"],
     "rootDir": "src",
     "outDir": "dist",
+    "paths": {
+      "jats-utils": ["../jats-utils/dist/index.d.ts"]
+    },
     "typeRoots": [
       "./types",
       "./node_modules/@types",
