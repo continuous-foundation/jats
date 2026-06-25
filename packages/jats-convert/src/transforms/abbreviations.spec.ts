@@ -1,150 +1,91 @@
-import { describe, expect, test } from 'vitest';
-import { abbreviationSectionTransform } from './abbreviations';
-import type { PageFrontmatter } from 'myst-frontmatter';
-import { copyNode } from '../utils';
+import { describe, expect, it } from 'vitest';
+import { VFile } from 'vfile';
+import { u } from 'unist-builder';
+import { defListAbbreviationTransform } from './abbreviations.js';
 
-describe('abbreviationSectionTransform', () => {
-  test('valid abbreviations are pulled out', () => {
-    const tree = {
-      type: 'root',
-      children: [
-        {
-          type: 'block',
-          children: [
-            {
-              type: 'paragraph',
-              children: [
-                {
-                  type: 'text',
-                  value: 'Some text',
-                },
-              ],
-            },
-          ],
-        },
-        {
-          type: 'block',
-          children: [
-            {
-              type: 'heading',
-              children: [
-                {
-                  type: 'text',
-                  value: 'Abbreviations',
-                },
-              ],
-            },
-            {
-              type: 'paragraph',
-              children: [
-                {
-                  type: 'text',
-                  value:
-                    'ACC1, acetyl-CoA carboxylase-1; BHT: butylated hydroxytoluene;CER,ceramides; FASN, fatty acid synthase; FDR, false discovery rate.',
-                },
-              ],
-            },
-          ],
-        },
-      ],
-    };
-    const result = {
-      type: 'root',
-      children: [
-        {
-          type: 'block',
-          children: [
-            {
-              type: 'paragraph',
-              children: [
-                {
-                  type: 'text',
-                  value: 'Some text',
-                },
-              ],
-            },
-          ],
-        },
-      ],
-    };
-    const frontmatter: PageFrontmatter = {
-      title: 'my title',
-      abbreviations: {
-        ABC: 'alphabet',
-      },
-    };
-    abbreviationSectionTransform(tree, frontmatter);
-    expect(tree).toEqual(result);
-    expect(frontmatter).toEqual({
-      title: 'my title',
-      abbreviations: {
-        ABC: 'alphabet',
-        ACC1: 'acetyl-CoA carboxylase-1',
-        BHT: 'butylated hydroxytoluene',
-        CER: 'ceramides',
-        FASN: 'fatty acid synthase',
-        FDR: 'false discovery rate',
-      },
+function bodyWith(...children: unknown[]) {
+  return u('body', children);
+}
+
+describe('defListAbbreviationTransform', () => {
+  it('extracts abbreviations from def-list title', () => {
+    const tree = bodyWith(
+      u('def-list', [
+        u('title', [u('text', 'Abbreviations')]),
+        u('def-item', [
+          u('term', [u('text', 'TP')]),
+          u('def', [u('p', [u('text', 'Temporal Priority')])]),
+        ]),
+        u('def-item', [
+          u('term', [u('text', 'DAG')]),
+          u('def', [u('p', [u('text', 'Directed Acyclic Graph')])]),
+        ]),
+      ]),
+    );
+    const frontmatter: { abbreviations?: Record<string, string> } = {};
+    const file = new VFile();
+    defListAbbreviationTransform(tree, frontmatter, file);
+
+    expect(frontmatter.abbreviations).toEqual({
+      TP: 'Temporal Priority',
+      DAG: 'Directed Acyclic Graph',
     });
+    expect(tree.children).toHaveLength(0);
+    expect(file.messages).toHaveLength(0);
   });
-  test('single invalid abbreviation prevents removal', () => {
-    const tree = {
-      type: 'root',
-      children: [
-        {
-          type: 'block',
-          children: [
-            {
-              type: 'paragraph',
-              children: [
-                {
-                  type: 'text',
-                  value: 'Some text',
-                },
-              ],
-            },
-          ],
-        },
-        {
-          type: 'block',
-          children: [
-            {
-              type: 'heading',
-              children: [
-                {
-                  type: 'text',
-                  value: 'Abbreviations',
-                },
-              ],
-            },
-            {
-              type: 'paragraph',
-              children: [
-                {
-                  type: 'text',
-                  value:
-                    'ACC1, acetyl-CoA carboxylase-1; BHT: butylated hydroxytoluene;CER,ceramides; FASN, fatty acid synthase; FD R, false discovery rate.',
-                },
-              ],
-            },
-          ],
-        },
-      ],
-    };
-    const result = copyNode(tree);
-    const frontmatter: PageFrontmatter = {
-      title: 'my title',
-      abbreviations: {
-        ABC: 'alphabet',
-      },
-    };
-    abbreviationSectionTransform(tree, frontmatter);
-    expect(tree).toEqual(result);
-    expect(frontmatter).toEqual({
-      title: 'my title',
-      abbreviations: {
-        ABC: 'alphabet',
-      },
-    });
+
+  it('uses parent sec title and removes abbreviations-only sec', () => {
+    const tree = bodyWith(
+      u('sec', [
+        u('label', [u('text', '7')]),
+        u('title', [u('text', 'Acronyms')]),
+        u('def-list', [
+          u('def-item', [
+            u('term', [u('text', 'ABC')]),
+            u('def', [u('p', [u('text', 'Area between the curves')])]),
+          ]),
+        ]),
+      ]),
+    );
+    const frontmatter: { abbreviations?: Record<string, string> } = {};
+    defListAbbreviationTransform(tree, frontmatter);
+
+    expect(frontmatter.abbreviations).toEqual({ ABC: 'Area between the curves' });
+    expect(tree.children).toHaveLength(0);
+  });
+
+  it('warns for unknown titles but still converts', () => {
+    const tree = bodyWith(
+      u('def-list', [
+        u('title', [u('text', 'Glossary')]),
+        u('def-item', [
+          u('term', [u('text', 'ER')]),
+          u('def', [u('p', [u('text', 'Endoplasmic Reticulum')])]),
+        ]),
+      ]),
+    );
+    const frontmatter: { abbreviations?: Record<string, string> } = {};
+    const file = new VFile();
+    defListAbbreviationTransform(tree, frontmatter, file);
+
+    expect(frontmatter.abbreviations).toEqual({ ER: 'Endoplasmic Reticulum' });
+    expect(file.messages.some((m) => m.reason?.includes('unknown title'))).toBe(true);
+    expect(file.messages[0]?.note).toBe('Glossary');
+  });
+
+  it('preserves term markup in abbreviation keys', () => {
+    const tree = bodyWith(
+      u('def-list', [
+        u('title', [u('text', 'Abbreviations')]),
+        u('def-item', [
+          u('term', [u('text', 'IC'), u('sub', [u('text', '50')])]),
+          u('def', [u('p', [u('text', 'Half-maximal concentration')])]),
+        ]),
+      ]),
+    );
+    const frontmatter: { abbreviations?: Record<string, string> } = {};
+    defListAbbreviationTransform(tree, frontmatter);
+
+    expect(frontmatter.abbreviations).toEqual({ IC50: 'Half-maximal concentration' });
   });
 });
