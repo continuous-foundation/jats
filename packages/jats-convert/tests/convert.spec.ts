@@ -39,6 +39,7 @@ import mathYml from './math.yml' with { type: 'text' };
 import preformatYml from './preformat.yml' with { type: 'text' };
 import referencesYml from './references.yml' with { type: 'text' };
 import tablesYml from './tables.yml' with { type: 'text' };
+import defListYml from './def-list.yml' with { type: 'text' };
 import enumeratorsYml from './enumerators.yml' with { type: 'text' };
 import supplementaryYml from './supplementary.yml' with { type: 'text' };
 import statementYml from './statement.yml' with { type: 'text' };
@@ -50,6 +51,7 @@ const YAML_FIXTURES: Record<string, string> = {
   'basic.yml': basicYml,
   'boxedtext.yml': boxedtextYml,
   'figures.yml': figuresYml,
+  'def-list.yml': defListYml,
   'enumerators.yml': enumeratorsYml,
   'images.yml': imagesYml,
   'math.yml': mathYml,

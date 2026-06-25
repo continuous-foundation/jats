@@ -1,10 +1,110 @@
 import type { GenericNode, GenericParent } from 'myst-common';
 import type { ProjectFrontmatter } from 'myst-frontmatter';
-import { selectAll } from 'unist-util-select';
+import { select, selectAll } from 'unist-util-select';
 import type { VFile } from 'vfile';
+import { remove } from 'unist-util-remove';
 import { jatsFileWarn } from '../messages.js';
 import { toText } from '../utils.js';
-import { remove } from 'unist-util-remove';
+import { mergeAbbreviations, warnAbbreviationMergeConflict } from '../myst/abbreviations.js';
+
+const KNOWN_DEF_LIST_TITLES = new Set(['abbreviations', 'acronyms']);
+
+function normalizeListTitle(text: string): string {
+  return text.trim().toLowerCase();
+}
+
+function titleFromNode(node: GenericNode): string | undefined {
+  const title = select('title', node);
+  const text = title ? toText(title).trim() : '';
+  return text || undefined;
+}
+
+/** Prefer `<def-list><title>`, else parent `<sec><title>`. */
+function defListContextTitle(defList: GenericNode, parent?: GenericParent): string | undefined {
+  return titleFromNode(defList) ?? (parent?.type === 'sec' ? titleFromNode(parent) : undefined);
+}
+
+function abbreviationsFromDefList(defList: GenericNode): Record<string, string> {
+  const abbreviations: Record<string, string> = {};
+  selectAll('def-item', defList).forEach((item) => {
+    const term = select('term', item);
+    const def = select('def', item);
+    if (!term || !def) return;
+    const abbr = toText(term).trim();
+    const expansion = toText(def).trim();
+    if (!abbr || !expansion) return;
+    abbreviations[abbr] = expansion;
+  });
+  return abbreviations;
+}
+
+function isAbbreviationsOnlySec(sec: GenericNode): boolean {
+  const allowed = new Set(['label', 'title', 'def-list']);
+  return (sec.children ?? []).every((child) => allowed.has(child.type));
+}
+
+function findParent(target: GenericNode, root: GenericParent): GenericParent | undefined {
+  for (const child of root.children ?? []) {
+    if (child === target) return root;
+    if (child.children) {
+      const found = findParent(target, child as GenericParent);
+      if (found) return found;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Convert JATS `<def-list>` items into frontmatter abbreviations.
+ *
+ * Known when `<def-list>` or parent `<sec>` title is "Abbreviations" or "Acronyms"
+ * (case-insensitive). Other titles still convert, with a warning.
+ */
+export function defListAbbreviationTransform(
+  tree: GenericParent,
+  frontmatter: Pick<ProjectFrontmatter, 'abbreviations'>,
+  file?: VFile,
+) {
+  const defLists = selectAll('def-list', tree) as GenericNode[];
+  const nodesToRemove = new Set<GenericNode>();
+
+  defLists.forEach((defList) => {
+    const parent = findParent(defList, tree);
+    const title = defListContextTitle(defList, parent);
+    const known = title ? KNOWN_DEF_LIST_TITLES.has(normalizeListTitle(title)) : false;
+    const extracted = abbreviationsFromDefList(defList);
+
+    if (Object.keys(extracted).length === 0) {
+      jatsFileWarn(file, 'Could not parse def-list for abbreviations', {
+        source: 'jats-convert:abbreviations',
+        note: title ?? 'no title',
+      });
+      return;
+    }
+
+    if (!known) {
+      jatsFileWarn(file, 'Converting def-list to abbreviations with unknown title', {
+        source: 'jats-convert:abbreviations',
+        note: title ?? 'no title',
+      });
+    }
+
+    frontmatter.abbreviations = mergeAbbreviations(
+      frontmatter.abbreviations,
+      extracted,
+      (conflict) => warnAbbreviationMergeConflict(file, conflict),
+    );
+    nodesToRemove.add(defList);
+    if (parent?.type === 'sec' && isAbbreviationsOnlySec(parent)) {
+      nodesToRemove.add(parent);
+    }
+  });
+
+  nodesToRemove.forEach((node) => {
+    node.type = '__delete__';
+  });
+  remove(tree, { cascade: false }, '__delete__');
+}
 
 /**
  * If there is a section titled abbreviations, try to move abbreviations to frontmatter
@@ -52,7 +152,11 @@ export function abbreviationSectionTransform(
       return;
     }
     const newAbbreviations = Object.fromEntries(entries as [string, string][]);
-    frontmatter.abbreviations = { ...frontmatter.abbreviations, ...newAbbreviations };
+    frontmatter.abbreviations = mergeAbbreviations(
+      frontmatter.abbreviations,
+      newAbbreviations,
+      (conflict) => warnAbbreviationMergeConflict(file, conflict),
+    );
     block.type = '__delete__';
   });
   remove(tree, '__delete__');
@@ -101,7 +205,11 @@ export function abbreviationFootnoteTransform(
       return;
     }
     const newAbbreviations = Object.fromEntries(entries as [string, string][]);
-    frontmatter.abbreviations = { ...frontmatter.abbreviations, ...newAbbreviations };
+    frontmatter.abbreviations = mergeAbbreviations(
+      frontmatter.abbreviations,
+      newAbbreviations,
+      (conflict) => warnAbbreviationMergeConflict(file, conflict),
+    );
     fnDef.type = '__delete__';
   });
   remove(tree, '__delete__');

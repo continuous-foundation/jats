@@ -4,6 +4,62 @@ import { isUrl } from 'myst-cli-utils';
 import { selectAll } from 'unist-util-select';
 import { toText } from '../utils.js';
 import type { ProjectFrontmatter } from 'myst-frontmatter';
+import type { VFile } from 'vfile';
+import { jatsFileWarn } from '../messages.js';
+
+export type AbbreviationMergeConflict = {
+  key: string;
+  existing: string;
+  incoming: string;
+};
+
+export type FrontmatterAbbreviations = Record<string, string | null>;
+
+export function warnAbbreviationMergeConflict(
+  file: VFile | undefined,
+  conflict: AbbreviationMergeConflict,
+) {
+  jatsFileWarn(file, 'Conflicting abbreviation expansion for same key', {
+    source: 'jats-convert:abbreviations',
+    note: `${conflict.key}: kept "${conflict.existing}", ignored "${conflict.incoming}"`,
+  });
+}
+
+/**
+ * Merge abbreviation maps. Case variants with the same expansion collapse to the
+ * existing key spelling; different expansions under the same letters keep both keys.
+ * Exact key collisions keep the target value and call `onConflict`.
+ */
+export function mergeAbbreviations(
+  target: FrontmatterAbbreviations | undefined,
+  incoming: Record<string, string>,
+  onConflict?: (conflict: AbbreviationMergeConflict) => void,
+): FrontmatterAbbreviations {
+  const merged: FrontmatterAbbreviations = { ...(target ?? {}) };
+  Object.entries(incoming).forEach(([key, value]) => {
+    const existingKey = Object.keys(merged).find(
+      (existing) => existing.toLowerCase() === key.toLowerCase(),
+    );
+    if (!existingKey) {
+      merged[key] = value;
+      return;
+    }
+    if (merged[existingKey] === value) {
+      return;
+    }
+    if (existingKey === key) {
+      const existing = merged[key];
+      if (existing == null) {
+        merged[key] = value;
+        return;
+      }
+      onConflict?.({ key, existing, incoming: value });
+      return;
+    }
+    merged[key] = value;
+  });
+  return merged;
+}
 
 /**
  * Attempt to pull abbreviations out of tree
@@ -14,6 +70,7 @@ import type { ProjectFrontmatter } from 'myst-frontmatter';
 export function abbreviationsFromTree(
   tree: GenericParent,
   frontmatter: Pick<ProjectFrontmatter, 'abbreviations'>,
+  file?: VFile,
 ) {
   let abbreviations: Record<string, string> = {};
   const paragraphs = selectAll('paragraph', tree);
@@ -24,7 +81,11 @@ export function abbreviationsFromTree(
       ...abbreviationsFromText(text),
     };
   });
-  frontmatter.abbreviations = { ...frontmatter.abbreviations, ...abbreviations };
+  frontmatter.abbreviations = mergeAbbreviations(
+    frontmatter.abbreviations,
+    abbreviations,
+    (conflict) => warnAbbreviationMergeConflict(file, conflict),
+  );
 }
 
 function maybeStopWord(word: string) {

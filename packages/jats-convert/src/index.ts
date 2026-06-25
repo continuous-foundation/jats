@@ -35,6 +35,7 @@ import { inlineCitationsTransform } from './myst/inlineCitations.js';
 import {
   abbreviationFootnoteTransform,
   abbreviationSectionTransform,
+  defListAbbreviationTransform,
 } from './transforms/abbreviations.js';
 import { floatToEndTransform } from './transforms/supplementary.js';
 import { dataAvailabilityTransform } from './transforms/parts.js';
@@ -812,6 +813,7 @@ export class JatsParser implements IJatsParser {
 export const jatsConvertPlugin: Plugin<[Jats, Options?], Body, Body> = function (jats, opts) {
   this.Compiler = (body: Body, file: VFile) => {
     jats.vfile ??= file;
+    const { frontmatter } = jats;
     if (jats.abstract) {
       abstractTransform(jats.abstract, file);
       body.children = [
@@ -833,6 +835,7 @@ export const jatsConvertPlugin: Plugin<[Jats, Options?], Body, Body> = function 
     floatToEndTransform(body, file);
     backToBodyTransform(body, jats.back);
     dataAvailabilityTransform(body);
+    defListAbbreviationTransform(body, frontmatter, file);
     const refLookup = processJatsReferences(body, jats.references, { ...opts, vfile: file });
     basicTransformations(body, file);
     journalTransforms(jats.tree, body, file);
@@ -856,10 +859,9 @@ export const jatsConvertPlugin: Plugin<[Jats, Options?], Body, Body> = function 
       file,
     );
 
-    const { frontmatter } = jats;
     abbreviationSectionTransform(tree, frontmatter, file);
     abbreviationFootnoteTransform(tree, frontmatter, file);
-    abbreviationsFromTree(tree, frontmatter);
+    abbreviationsFromTree(tree, frontmatter, file);
     tableFootnotesToLegend(tree, file);
     warnMixedContainerEnumerators(tree, file);
     const abstract = selectAll('block', tree).find((block) => {
