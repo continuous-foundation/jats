@@ -62,6 +62,7 @@ const REF_TYPE_VALUES = new Set<string>(Object.values(RefType));
 const REF_TYPE_ALIASES: Record<string, RefType> = {
   figure: RefType.fig,
   figures: RefType.fig,
+  tab: RefType.table,
   tbl: RefType.table,
   tables: RefType.table,
   section: RefType.sec,
