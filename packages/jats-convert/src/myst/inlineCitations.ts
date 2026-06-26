@@ -5,6 +5,12 @@ import { selectAll } from 'unist-util-select';
 import type { VFile } from 'vfile';
 import { jatsFileWarn } from '../messages.js';
 
+/** Text between citeGroups in a list (comma, semicolon, or "and") */
+const CITE_LIST_SEPARATOR = /^\s*([,;]|[,;]{0,1}\s*and)\s*$/;
+
+/** Text between citeGroups in a range (hyphen or en-dash) */
+const CITE_RANGE_SEPARATOR = /^\s*[–-]\s*$/;
+
 /**
  * Remove cite node children
  *
@@ -93,7 +99,7 @@ function removeCiteSeparators(tree: GenericParent) {
       if (child.type !== 'citeGroup') return;
       const textChild = parent.children[index + 1];
       if (textChild?.type !== 'text') return;
-      if (!textChild.value?.match(/^\s*([,;]|[,;]{0,1}\s*(and))\s*$/)) return;
+      if (!textChild.value?.match(CITE_LIST_SEPARATOR)) return;
       const nextChild = parent.children[index + 2];
       if (nextChild?.type !== 'citeGroup') return;
       nextChild.children = [...(child.children ?? []), ...(nextChild.children ?? [])];
@@ -146,7 +152,7 @@ function expandHyphenatedCites(tree: GenericParent, referenceList: string[], fil
       const firstCite = child.children?.[0] as Cite;
       const textChild = parent.children[index + 1];
       if (textChild?.type !== 'text') return;
-      if (!textChild.value?.match(/^\s*[–-]\s*$/)) return;
+      if (!textChild.value?.match(CITE_RANGE_SEPARATOR)) return;
       const nextChild = parent.children[index + 2];
       if (nextChild?.type !== 'citeGroup') return;
       if (nextChild.children?.length !== 1) return;
@@ -174,13 +180,32 @@ function expandHyphenatedCites(tree: GenericParent, referenceList: string[], fil
 }
 
 /**
+ * Whether a node is a text node containing only citation separators
+ *
+ * This includes commas, semicolons, hyphens/en-dashes, "and", and whitespace.
+ */
+function isCiteSeparator(node?: GenericParent['children'][number]) {
+  return (
+    node?.type === 'text' &&
+    !!node.value &&
+    (CITE_LIST_SEPARATOR.test(node.value) || CITE_RANGE_SEPARATOR.test(node.value))
+  );
+}
+
+/**
  * Remove superscript around citations
+ *
+ * A superscript is lifted when every child is a citeGroup or a citation
+ * separator.
  */
 function removeCiteSuperscript(tree: GenericParent) {
   const citeGroupParents = selectAll(':has(> citeGroup)', tree) as GenericParent[];
   citeGroupParents.forEach((parent) => {
     if (parent.type !== 'superscript') return;
-    if (parent.children.length !== 1) return;
+    const onlyCiteContent = parent.children.every(
+      (child) => child.type === 'citeGroup' || isCiteSeparator(child),
+    );
+    if (!onlyCiteContent) return;
     parent.type = '__lift__';
   });
   liftChildren(tree, '__lift__');
