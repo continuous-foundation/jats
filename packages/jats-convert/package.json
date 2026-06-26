@@ -42,7 +42,7 @@
     "jats-tags": "^1.1.7",
     "jats-xml": "^1.1.7",
     "js-yaml": "^4.1.0",
-    "mathml-to-latex": "^1.3.0",
+    "mathml-to-latex": "^1.8.0",
     "myst-cli-utils": "^2.0.11",
     "myst-common": "^1.7.5",
     "myst-frontmatter": "^1.7.5",
