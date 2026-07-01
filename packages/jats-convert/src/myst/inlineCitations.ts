@@ -192,21 +192,39 @@ function isCiteSeparator(node?: GenericParent['children'][number]) {
   );
 }
 
+/** Inline formatting nodes that may wrap references in JATS */
+const INLINE_FORMATTING_TYPES = new Set([
+  'superscript',
+  'subscript',
+  'emphasis',
+  'strong',
+  'underline',
+  'delete',
+  'smallcaps',
+]);
+
+function isReferenceContent(node?: GenericParent['children'][number]) {
+  return (
+    node?.type === 'citeGroup' ||
+    node?.type === 'crossReference' ||
+    node?.type === 'footnoteReference' ||
+    isCiteSeparator(node)
+  );
+}
+
 /**
- * Remove superscript around citations
+ * Remove inline formatting around references
  *
- * A superscript is lifted when every child is a citeGroup or a citation
- * separator.
+ * Formatting is lifted when every child is a reference node or a citation separator.
  */
-function removeCiteSuperscript(tree: GenericParent) {
-  const citeGroupParents = selectAll(':has(> citeGroup)', tree) as GenericParent[];
-  citeGroupParents.forEach((parent) => {
-    if (parent.type !== 'superscript') return;
-    const onlyCiteContent = parent.children.every(
-      (child) => child.type === 'citeGroup' || isCiteSeparator(child),
-    );
-    if (!onlyCiteContent) return;
-    parent.type = '__lift__';
+function removeReferenceFormatting(tree: GenericParent) {
+  INLINE_FORMATTING_TYPES.forEach((type) => {
+    const parents = selectAll(type, tree) as GenericParent[];
+    parents.forEach((parent) => {
+      const onlyReferenceContent = parent.children.every(isReferenceContent);
+      if (!onlyReferenceContent) return;
+      parent.type = '__lift__';
+    });
   });
   liftChildren(tree, '__lift__');
 }
@@ -214,7 +232,7 @@ function removeCiteSuperscript(tree: GenericParent) {
 /**
  * Ensure there are spaces before citations
  *
- * This is a problem, for example, when citations are removed from superscript and there
+ * This is a problem, for example, when citations are removed from formatting wrappers and there
  * was no space before the citation.
  */
 function ensureSpaceBeforeCite(tree: GenericParent) {
@@ -248,7 +266,7 @@ export function inlineCitationsTransform(
     expandHyphenatedCites(tree, referenceIds, file);
     removeCiteSeparators(tree);
     removeCiteParentheses(tree);
-    removeCiteSuperscript(tree);
+    removeReferenceFormatting(tree);
     ensureSpaceBeforeCite(tree);
     current = JSON.stringify(tree);
   }
