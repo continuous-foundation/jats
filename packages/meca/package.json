@@ -47,6 +47,8 @@
     "adm-zip": "^0.5.10",
     "jats-utils": "^1.1.7",
     "jats-xml": "^1.1.7",
+    "myst-cli-utils": "^2.0.11",
+    "myst-common": "^1.7.5",
     "node-fetch": "^3.3.1",
     "unist-util-select": "^4.0.0",
     "xml-js": "^1.6.11"
@@ -59,8 +61,6 @@
     "@types/adm-zip": "^0.5.0",
     "chalk": "^5.2.0",
     "commander": "^10.0.1",
-    "myst-cli-utils": "^2.0.11",
-    "myst-common": "^1.7.5",
     "myst-frontmatter": "^1.7.5"
   }
 }
