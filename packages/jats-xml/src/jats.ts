@@ -6,7 +6,7 @@ import type { Element, DeclarationAttributes } from 'xml-js';
 import { validatePageFrontmatter, type PageFrontmatter } from 'myst-frontmatter';
 import { select as unistSelect, selectAll } from 'unist-util-select';
 import { Tags } from 'jats-tags';
-import { findArticleId, processAffiliation, processContributor } from './utils.js';
+import { findArticleId, normalizeSubject, processAffiliation, processContributor } from './utils.js';
 import type {
   Front,
   Body,
@@ -234,7 +234,7 @@ export class Jats {
         affiliations: affiliations.length ? affiliations : undefined,
         keywords: keywords.length ? keywords : undefined,
         venue: journalTitle ? { title: toText(journalTitle) } : undefined,
-        subject: articleSubject ? toText(articleSubject) : undefined,
+        subject: articleSubject ? normalizeSubject(toText(articleSubject)) : undefined,
         license: licenseString ?? undefined,
         open_access: openAccess,
       },

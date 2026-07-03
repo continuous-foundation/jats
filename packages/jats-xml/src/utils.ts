@@ -10,6 +10,21 @@ import { remove } from 'unist-util-remove';
 
 export type PubIdTypes = 'doi' | 'pmc' | 'pmid' | 'publisher-id' | string;
 
+/**
+ * Normalize a JATS subject label for consistent frontmatter (dedupe ALL CAPS vs
+ * title case, and underscore_spaced vs space-separated variants).
+ */
+export function normalizeSubject(subject: string): string {
+  return subject
+    .trim()
+    .replace(/_/g, ' ')
+    .replace(/\s+/g, ' ')
+    .split(' ')
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+}
+
 export function findArticleId(
   node: GenericParent | undefined,
   pubIdType: PubIdTypes = 'doi',
