@@ -40,9 +40,9 @@ describe('mergeAbbreviations', () => {
   });
 
   test('keeps the target value when the exact key already exists', () => {
-    expect(
-      mergeAbbreviations({ TR: 'total reflection' }, { TR: 'transcription' }),
-    ).toEqual({ TR: 'total reflection' });
+    expect(mergeAbbreviations({ TR: 'total reflection' }, { TR: 'transcription' })).toEqual({
+      TR: 'total reflection',
+    });
   });
 
   test('calls onConflict for an exact key with a different expansion', () => {

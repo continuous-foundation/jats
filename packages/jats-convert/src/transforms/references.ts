@@ -82,7 +82,7 @@ function hasBibtexField(lines: string[], field: string) {
 function bibtexFieldRawValue(lines: string[], field: string): string | undefined {
   const line = lines.find((l) => l.startsWith(`  ${field} = `));
   if (!line) return undefined;
-  const braced = line.match(/^  \w+ = \{(.+)\}$/);
+  const braced = line.match(/^ {2}\w+ = \{(.+)\}$/);
   if (!braced) return undefined;
   return braced[1].replace(/\\([\\{}$%#&_^~])/g, '$1');
 }
