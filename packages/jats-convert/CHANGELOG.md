@@ -1,5 +1,21 @@
 # jats-convert
 
+## 1.1.8
+
+### Patch Changes
+
+- e6e05d4: Pull identifiers out of unstructured citation text
+- e6e05d4: Prevent abbreviations that match the word
+- e6e05d4: Support def-lists as abbreviations
+- e6e05d4: Fix mathml bracket error
+- e6e05d4: Ignore all xref formatting
+- e6e05d4: Handle superscript citations followed by separator
+- e6e05d4: Address abbreviation edge case
+- e6e05d4: Better handling of static vs external media
+  - jats-xml@1.1.8
+  - jats-tags@1.1.8
+  - jats-fetch@1.1.8
+
 ## 1.1.7
 
 ### Patch Changes

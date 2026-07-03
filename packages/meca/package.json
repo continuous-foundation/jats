@@ -1,6 +1,6 @@
 {
   "name": "meca",
-  "version": "1.1.7",
+  "version": "1.1.8",
   "description": "Types and utilities for working with MECA",
   "author": "Rowan Cockett <rowan@continuousfoundation.org>",
   "homepage": "https://github.com/continuous-foundation/jats",
@@ -45,8 +45,8 @@
   },
   "dependencies": {
     "adm-zip": "^0.5.10",
-    "jats-utils": "^1.1.7",
-    "jats-xml": "^1.1.7",
+    "jats-utils": "^1.1.8",
+    "jats-xml": "^1.1.8",
     "myst-cli-utils": "^2.0.11",
     "myst-common": "^1.7.5",
     "node-fetch": "^3.3.1",
