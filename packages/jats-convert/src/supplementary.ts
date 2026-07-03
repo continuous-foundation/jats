@@ -22,8 +22,10 @@ export function isFigureMediaUrl(url: string | undefined): boolean {
 }
 
 /**
- * Props for mdast `link` nodes served via artifact `/file/…` routes when `url` is a relative
- * MECA path (e.g. `supplements/file.pdf`). Figure vs file is decided by the caller.
+ * Extra props for mdast `link` nodes whose `url` is a relative path inside a MECA bundle
+ * (e.g. `supplements/file.pdf`), as opposed to an absolute or protocol URL.
+ * Returns `{ static: true }` and, when `media` is provided, `data.contentType`.
+ * Returns `undefined` for external URLs.
  */
 export function artifactFileLinkProps(
   url: string | undefined,
