@@ -5,6 +5,12 @@ import { selectAll } from 'unist-util-select';
 import type { VFile } from 'vfile';
 import { jatsFileWarn } from '../messages.js';
 
+/** Text between citeGroups in a list (comma, semicolon, or "and") */
+const CITE_LIST_SEPARATOR = /^\s*([,;]|[,;]{0,1}\s*and)\s*$/;
+
+/** Text between citeGroups in a range (hyphen or en-dash) */
+const CITE_RANGE_SEPARATOR = /^\s*[–-]\s*$/;
+
 /**
  * Remove cite node children
  *
@@ -93,7 +99,7 @@ function removeCiteSeparators(tree: GenericParent) {
       if (child.type !== 'citeGroup') return;
       const textChild = parent.children[index + 1];
       if (textChild?.type !== 'text') return;
-      if (!textChild.value?.match(/^\s*([,;]|[,;]{0,1}\s*(and))\s*$/)) return;
+      if (!textChild.value?.match(CITE_LIST_SEPARATOR)) return;
       const nextChild = parent.children[index + 2];
       if (nextChild?.type !== 'citeGroup') return;
       nextChild.children = [...(child.children ?? []), ...(nextChild.children ?? [])];
@@ -146,7 +152,7 @@ function expandHyphenatedCites(tree: GenericParent, referenceList: string[], fil
       const firstCite = child.children?.[0] as Cite;
       const textChild = parent.children[index + 1];
       if (textChild?.type !== 'text') return;
-      if (!textChild.value?.match(/^\s*[–-]\s*$/)) return;
+      if (!textChild.value?.match(CITE_RANGE_SEPARATOR)) return;
       const nextChild = parent.children[index + 2];
       if (nextChild?.type !== 'citeGroup') return;
       if (nextChild.children?.length !== 1) return;
@@ -174,14 +180,51 @@ function expandHyphenatedCites(tree: GenericParent, referenceList: string[], fil
 }
 
 /**
- * Remove superscript around citations
+ * Whether a node is a text node containing only citation separators
+ *
+ * This includes commas, semicolons, hyphens/en-dashes, "and", and whitespace.
  */
-function removeCiteSuperscript(tree: GenericParent) {
-  const citeGroupParents = selectAll(':has(> citeGroup)', tree) as GenericParent[];
-  citeGroupParents.forEach((parent) => {
-    if (parent.type !== 'superscript') return;
-    if (parent.children.length !== 1) return;
-    parent.type = '__lift__';
+function isCiteSeparator(node?: GenericParent['children'][number]) {
+  return (
+    node?.type === 'text' &&
+    !!node.value &&
+    (CITE_LIST_SEPARATOR.test(node.value) || CITE_RANGE_SEPARATOR.test(node.value))
+  );
+}
+
+/** Inline formatting nodes that may wrap references in JATS */
+const INLINE_FORMATTING_TYPES = new Set([
+  'superscript',
+  'subscript',
+  'emphasis',
+  'strong',
+  'underline',
+  'delete',
+  'smallcaps',
+]);
+
+function isReferenceContent(node?: GenericParent['children'][number]) {
+  return (
+    node?.type === 'citeGroup' ||
+    node?.type === 'crossReference' ||
+    node?.type === 'footnoteReference' ||
+    isCiteSeparator(node)
+  );
+}
+
+/**
+ * Remove inline formatting around references
+ *
+ * Formatting is lifted when every child is a reference node or a citation separator.
+ */
+function removeReferenceFormatting(tree: GenericParent) {
+  INLINE_FORMATTING_TYPES.forEach((type) => {
+    const parents = selectAll(type, tree) as GenericParent[];
+    parents.forEach((parent) => {
+      const onlyReferenceContent = parent.children.every(isReferenceContent);
+      if (!onlyReferenceContent) return;
+      parent.type = '__lift__';
+    });
   });
   liftChildren(tree, '__lift__');
 }
@@ -189,7 +232,7 @@ function removeCiteSuperscript(tree: GenericParent) {
 /**
  * Ensure there are spaces before citations
  *
- * This is a problem, for example, when citations are removed from superscript and there
+ * This is a problem, for example, when citations are removed from formatting wrappers and there
  * was no space before the citation.
  */
 function ensureSpaceBeforeCite(tree: GenericParent) {
@@ -223,7 +266,7 @@ export function inlineCitationsTransform(
     expandHyphenatedCites(tree, referenceIds, file);
     removeCiteSeparators(tree);
     removeCiteParentheses(tree);
-    removeCiteSuperscript(tree);
+    removeReferenceFormatting(tree);
     ensureSpaceBeforeCite(tree);
     current = JSON.stringify(tree);
   }

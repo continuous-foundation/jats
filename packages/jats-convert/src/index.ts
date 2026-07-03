@@ -35,6 +35,7 @@ import { inlineCitationsTransform } from './myst/inlineCitations.js';
 import {
   abbreviationFootnoteTransform,
   abbreviationSectionTransform,
+  defListAbbreviationTransform,
 } from './transforms/abbreviations.js';
 import { floatToEndTransform } from './transforms/supplementary.js';
 import { dataAvailabilityTransform } from './transforms/parts.js';
@@ -48,12 +49,17 @@ import {
   statementMetadataChildTypes,
 } from './statement.js';
 import {
+  artifactFileLinkProps,
   captionFromSupplementary,
   isFigureMediaUrl,
-  mimeTypeFromMedia,
   supplementaryFileLinkLabel,
   unhandledSupplementaryChildTypes,
 } from './supplementary.js';
+
+function linkPropsForHref(url: string | undefined, media?: GenericNode) {
+  const file = artifactFileLinkProps(url, media);
+  return file ? { url, ...file } : { url };
+}
 
 function refTypeToReferenceKind(kind?: RefType): string | undefined {
   switch (kind) {
@@ -601,16 +607,11 @@ const handlers: Record<string, Handler> = {
       }
       withUrl.forEach((item) => {
         const url = item['xlink:href'] as string;
-        const contentType = mimeTypeFromMedia(item);
         if (withUrl.length > 1) {
           state.openNode('listItem');
         }
         state.openNode('paragraph');
-        state.openNode('link', {
-          url,
-          static: true,
-          data: contentType ? { contentType } : undefined,
-        });
+        state.openNode('link', linkPropsForHref(url, item));
         state.text(supplementaryFileLinkLabel({ media: item, url, groupLabel, singleFile }));
         state.closeNode();
         state.closeNode();
@@ -687,10 +688,10 @@ const handlers: Record<string, Handler> = {
     }
   },
   media(node, state) {
-    state.renderInline(node, 'link', { url: node['xlink:href'] });
+    state.renderInline(node, 'link', linkPropsForHref(node['xlink:href'], node));
   },
   ['inline-supplementary-material'](node, state) {
-    state.renderInline(node, 'link', { url: node['xlink:href'] });
+    state.renderInline(node, 'link', linkPropsForHref(node['xlink:href'], node));
   },
   caption(node, state) {
     state.renderChildren(node);
@@ -812,6 +813,7 @@ export class JatsParser implements IJatsParser {
 export const jatsConvertPlugin: Plugin<[Jats, Options?], Body, Body> = function (jats, opts) {
   this.Compiler = (body: Body, file: VFile) => {
     jats.vfile ??= file;
+    const { frontmatter } = jats;
     if (jats.abstract) {
       abstractTransform(jats.abstract, file);
       body.children = [
@@ -833,6 +835,7 @@ export const jatsConvertPlugin: Plugin<[Jats, Options?], Body, Body> = function 
     floatToEndTransform(body, file);
     backToBodyTransform(body, jats.back);
     dataAvailabilityTransform(body);
+    defListAbbreviationTransform(body, frontmatter, file);
     const refLookup = processJatsReferences(body, jats.references, { ...opts, vfile: file });
     basicTransformations(body, file);
     journalTransforms(jats.tree, body, file);
@@ -856,10 +859,9 @@ export const jatsConvertPlugin: Plugin<[Jats, Options?], Body, Body> = function 
       file,
     );
 
-    const { frontmatter } = jats;
     abbreviationSectionTransform(tree, frontmatter, file);
     abbreviationFootnoteTransform(tree, frontmatter, file);
-    abbreviationsFromTree(tree, frontmatter);
+    abbreviationsFromTree(tree, frontmatter, file);
     tableFootnotesToLegend(tree, file);
     warnMixedContainerEnumerators(tree, file);
     const abstract = selectAll('block', tree).find((block) => {

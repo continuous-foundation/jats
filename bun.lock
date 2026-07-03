@@ -18,7 +18,7 @@
     },
     "packages/jats-cli": {
       "name": "jats-cli",
-      "version": "1.1.5",
+      "version": "1.1.7",
       "bin": {
         "jats": "./dist/jats.cjs",
       },
@@ -48,15 +48,15 @@
     },
     "packages/jats-convert": {
       "name": "jats-convert",
-      "version": "1.1.5",
+      "version": "1.1.7",
       "dependencies": {
         "doi-utils": "^2.0.6",
         "dotenv": "^16.4.5",
-        "jats-fetch": "^1.1.5",
-        "jats-tags": "^1.1.5",
-        "jats-xml": "^1.1.5",
+        "jats-fetch": "^1.1.7",
+        "jats-tags": "^1.1.7",
+        "jats-xml": "^1.1.7",
         "js-yaml": "^4.1.0",
-        "mathml-to-latex": "^1.3.0",
+        "mathml-to-latex": "^1.8.0",
         "myst-cli-utils": "^2.0.11",
         "myst-common": "^1.7.5",
         "myst-frontmatter": "^1.7.5",
@@ -76,7 +76,7 @@
     },
     "packages/jats-fetch": {
       "name": "jats-fetch",
-      "version": "1.1.5",
+      "version": "1.1.7",
       "dependencies": {
         "@aws-sdk/client-s3": "3.686.0",
         "doi-utils": "^2.0.6",
@@ -87,20 +87,18 @@
     },
     "packages/jats-tags": {
       "name": "jats-tags",
-      "version": "1.1.5",
+      "version": "1.1.7",
       "devDependencies": {
         "myst-common": "^1.7.5",
       },
     },
     "packages/jats-utils": {
       "name": "jats-utils",
-      "version": "1.1.5",
+      "version": "1.1.7",
       "dependencies": {
-        "jats-tags": "^1.1.5",
-        "unist-util-select": "^4.0.0",
-      },
-      "devDependencies": {
+        "jats-tags": "^1.1.7",
         "myst-common": "^1.0.0",
+        "unist-util-select": "^4.0.0",
       },
       "peerDependencies": {
         "xml-js": "^1",
@@ -108,13 +106,13 @@
     },
     "packages/jats-xml": {
       "name": "jats-xml",
-      "version": "1.1.5",
+      "version": "1.1.7",
       "dependencies": {
         "adm-zip": "^0.5.10",
         "character-entities": "^2.0.2",
         "doi-utils": "^2.0.6",
-        "jats-tags": "^1.1.5",
-        "jats-utils": "^1.1.5",
+        "jats-tags": "^1.1.7",
+        "jats-utils": "^1.1.7",
         "myst-cli-utils": "^2.0.11",
         "myst-common": "^1.7.5",
         "myst-frontmatter": "^1.7.5",
@@ -139,12 +137,14 @@
     },
     "packages/meca": {
       "name": "meca",
-      "version": "1.1.5",
+      "version": "1.1.7",
       "bin": "./dist/meca.cjs",
       "dependencies": {
         "adm-zip": "^0.5.10",
-        "jats-utils": "^1.1.5",
-        "jats-xml": "^1.1.5",
+        "jats-utils": "^1.1.7",
+        "jats-xml": "^1.1.7",
+        "myst-cli-utils": "^2.0.11",
+        "myst-common": "^1.7.5",
         "node-fetch": "^3.3.1",
         "unist-util-select": "^4.0.0",
         "xml-js": "^1.6.11",
@@ -153,8 +153,6 @@
         "@types/adm-zip": "^0.5.0",
         "chalk": "^5.2.0",
         "commander": "^10.0.1",
-        "myst-cli-utils": "^2.0.11",
-        "myst-common": "^1.7.5",
         "myst-frontmatter": "^1.7.5",
       },
       "peerDependencies": {
@@ -638,7 +636,7 @@
 
     "@vitest/utils": ["@vitest/utils@4.1.8", "", { "dependencies": { "@vitest/pretty-format": "4.1.8", "convert-source-map": "^2.0.0", "tinyrainbow": "^3.1.0" } }, "sha512-uOJamYALNhfJ6iolExyQM40yIQwDqYnkKtQ5VCiSe17E33H0aQ/u+1GlRuz4LZBk6Mm3sg90G9hEbmEt37C1Zg=="],
 
-    "@xmldom/xmldom": ["@xmldom/xmldom@0.8.13", "", {}, "sha512-KRYzxepc14G/CEpEGc3Yn+JKaAeT63smlDr+vjB8jRfgTBBI9wRj/nkQEO+ucV8p8I9bfKLWp37uHgFrbntPvw=="],
+    "@xmldom/xmldom": ["@xmldom/xmldom@0.9.10", "", {}, "sha512-A9gOqLdi6cV4ibazAjcQufGj0B1y/vDqYrcuP6d/6x8P27gRS8643Dj9o1dEKtB6O7fwxb2FgBmJS2mX7gpvdw=="],
 
     "acorn": ["acorn@8.16.0", "", { "bin": { "acorn": "bin/acorn" } }, "sha512-UVJyE9MttOsBQIDKw1skb9nAwQuR5wuGD3+82K6JgJlm/Y+KI92oNsMNGZCYdDsVtRHSak0pcV5Dno5+4jh9sw=="],
 
@@ -1146,7 +1144,7 @@
 
     "math-intrinsics": ["math-intrinsics@1.1.0", "", {}, "sha512-/IXtbwEk5HTPyEwyKX6hGkYXxM9nbj64B+ilVJnC/R6B0pH5G4V3b0pVbL7DBj4tkhBAppbQUlf6F6Xl9LHu1g=="],
 
-    "mathml-to-latex": ["mathml-to-latex@1.5.0", "", { "dependencies": { "@xmldom/xmldom": "^0.8.10" } }, "sha512-rrWn0eEvcEcdMM4xfHcSGIy+i01DX9byOdXTLWg+w1iJ6O6ohP5UXY1dVzNUZLhzfl3EGcRekWLhY7JT5Omaew=="],
+    "mathml-to-latex": ["mathml-to-latex@1.8.0", "", { "dependencies": { "@xmldom/xmldom": "^0.9.10" } }, "sha512-gQ0uK3zqB8HwlfaXJkEL5rgaZNbKUiBMmBP/B/W+b+t6KcseLSuYb1b0BjLgS9ZiQa24ePkqTX8/6FaQuDL7wQ=="],
 
     "mdast": ["mdast@3.0.0", "", {}, "sha512-xySmf8g4fPKMeC07jXGz971EkLbWAJ83s4US2Tj9lEdnZ142UP5grN73H1Xd3HzrdbU5o9GYYP/y8F9ZSwLE9g=="],
 

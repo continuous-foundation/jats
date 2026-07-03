@@ -105,7 +105,7 @@ cases:
       </inline-formula></p>
     mdast:
       type: inlineMath
-      value: 'L^{p} \left(\right. 1 < p < \infty \left.\right)'
+      value: 'L^{p} \left(1 < p < \infty\right)'
   - source: disp-formula-graphic
     title: disp-formula graphic-only equation stays block math with image child
     jats: |-

@@ -21,6 +21,29 @@ export function isFigureMediaUrl(url: string | undefined): boolean {
   return MEDIA_FIGURE_EXTENSIONS.some((ext) => url.toLowerCase().endsWith(ext));
 }
 
+/**
+ * Extra props for mdast `link` nodes whose `url` is a relative path inside a MECA bundle
+ * (e.g. `supplements/file.pdf`), as opposed to an absolute or protocol URL.
+ * Returns `{ static: true }` and, when `media` is provided, `data.contentType`.
+ * Returns `undefined` for external URLs.
+ */
+export function artifactFileLinkProps(
+  url: string | undefined,
+  media?: GenericNode,
+): { static: true; data?: { contentType: string } } | undefined {
+  const t = url?.trim();
+  if (!t) return undefined;
+  if (
+    /^https?:\/\//i.test(t) ||
+    t.startsWith('//') ||
+    /^(mailto:|data:|blob:|javascript:)/i.test(t)
+  ) {
+    return undefined;
+  }
+  const contentType = media ? mimeTypeFromMedia(media) : undefined;
+  return contentType ? { static: true, data: { contentType } } : { static: true };
+}
+
 export function mimeTypeFromMedia(media: GenericNode): string | undefined {
   const type = media.mimetype;
   const subtype = media['mime-subtype'];

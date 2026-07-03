@@ -1,0 +1,49 @@
+cases:
+  - title: def-list with title extracts abbreviations to frontmatter
+    jats: |-
+      <def-list>
+      <title>Abbreviations</title>
+      <def-item><term>TP</term><def><p>Temporal Priority</p></def></def-item>
+      <def-item><term>PR</term><def><p>Probability Raising</p></def></def-item>
+      </def-list>
+    frontmatter:
+      abbreviations:
+        TP: Temporal Priority
+        PR: Probability Raising
+    mdast:
+      type: root
+    expect_no_warn_contains:
+      - unknown title
+
+  - title: sec acronyms title with def-list
+    jats: |-
+      <sec>
+      <label>7</label>
+      <title>Acronyms</title>
+      <def-list>
+      <def-item><term>ABC</term><def><p>Area between the curves</p></def></def-item>
+      <def-item><term>AE</term><def><p>ArrayExpress by the European Bioinformatics Institute</p></def></def-item>
+      </def-list>
+      </sec>
+    frontmatter:
+      abbreviations:
+        ABC: Area between the curves
+        AE: ArrayExpress by the European Bioinformatics Institute
+    mdast:
+      type: root
+    expect_no_warn_contains:
+      - unknown title
+
+  - title: unknown def-list title warns and still converts
+    jats: |-
+      <def-list>
+      <title>Glossary</title>
+      <def-item><term>ER</term><def><p>Endoplasmic Reticulum</p></def></def-item>
+      </def-list>
+    frontmatter:
+      abbreviations:
+        ER: Endoplasmic Reticulum
+    mdast:
+      type: root
+    expect_warn_contains:
+      - Converting def-list to abbreviations with unknown title
