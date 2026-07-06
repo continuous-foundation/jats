@@ -366,6 +366,16 @@ const handlers: Record<string, Handler> = {
     const captionNode = select('caption', node) as GenericNode | undefined;
     const labelNode = select('label', node) as GenericNode | undefined;
     const titleNode = select('title', node) as GenericNode | undefined;
+    const useContainer =
+      !!node.id ||
+      !!labelNode ||
+      !!select('table-wrap-foot', node) ||
+      !!titleNode ||
+      !!toText(captionNode).trim();
+    if (!useContainer) {
+      state.renderChildren(node);
+      return;
+    }
     const { label, identifier } = normalizeLabel(node.id) ?? {};
     const enumerator = resolveEnumerator({
       id: node.id,

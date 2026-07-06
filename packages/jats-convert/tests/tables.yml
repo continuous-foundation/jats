@@ -34,3 +34,41 @@ cases:
                       value: Supplementary Fig. 15
         - type: image
           url: 684031v1_tbls5.tif
+
+  - source: bioRxiv 10.1101/713717v2 utbl1
+    title: table-wrap with graphic only renders as bare image without container
+    jats: |-
+      <table-wrap orientation="portrait" position="anchor">
+      <graphic xlink:href="713717v2_utbl1.tif"/>
+      </table-wrap>
+    mdast:
+      type: image
+      url: 713717v2_utbl1.tif
+
+  - title: table-wrap with empty caption renders without container
+    jats: |-
+      <table-wrap orientation="portrait" position="anchor">
+      <caption></caption>
+      <graphic xlink:href="bare.tif"/>
+      </table-wrap>
+    mdast:
+      type: image
+      url: bare.tif
+
+  - title: table-wrap with only table element renders without container
+    jats: |-
+      <table-wrap><table><tbody><tr><td>cell</td></tr></tbody></table></table-wrap>
+    mdast:
+      type: table
+
+  - title: table-wrap with footnote renders as container
+    jats: |-
+      <table-wrap orientation="portrait" position="anchor">
+      <graphic xlink:href="tbl.tif"/>
+      <table-wrap-foot><fn><p>Footnote text</p></fn></table-wrap-foot>
+      </table-wrap>
+    mdast:
+      type: container
+      kind: table
+      children:
+        - type: legend
