@@ -45,6 +45,28 @@ cases:
       type: image
       url: 713717v2_utbl1.tif
 
+  - source: bioRxiv 10.1101/713717v1 utbl1
+    title: table-wrap with id and graphic only keeps xref target on image without container
+    jats: |-
+      <table-wrap id="utbl1" orientation="portrait" position="float">
+      <graphic xlink:href="713717v1_utbl1.tif"/>
+      </table-wrap>
+    mdast:
+      type: image
+      url: 713717v1_utbl1.tif
+      label: utbl1
+      identifier: utbl1
+
+  - title: table-wrap with id and table element keeps xref target on table without container
+    jats: |-
+      <table-wrap id="utbl2">
+      <table><tbody><tr><td>cell</td></tr></tbody></table>
+      </table-wrap>
+    mdast:
+      type: table
+      label: utbl2
+      identifier: utbl2
+
   - title: table-wrap with empty caption renders without container
     jats: |-
       <table-wrap orientation="portrait" position="anchor">

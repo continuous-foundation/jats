@@ -258,7 +258,7 @@ const handlers: Record<string, Handler> = {
     if (!link) {
       state.warn('Graphic has no xlink:href', 'graphic');
     }
-    state.addLeaf('image', { url: link });
+    state.addLeaf('image', { url: link, ...state.data.xrefTarget });
   },
   ['inline-graphic'](node, state) {
     const link = node?.['xlink:href'];
@@ -367,13 +367,16 @@ const handlers: Record<string, Handler> = {
     const labelNode = select('label', node) as GenericNode | undefined;
     const titleNode = select('title', node) as GenericNode | undefined;
     const useContainer =
-      !!node.id ||
       !!labelNode ||
       !!select('table-wrap-foot', node) ||
       !!titleNode ||
       !!toText(captionNode).trim();
     if (!useContainer) {
+      const { label, identifier } = normalizeLabel(node.id) ?? {};
+      const prevTarget = state.data.xrefTarget;
+      if (identifier) state.data.xrefTarget = { label, identifier };
       state.renderChildren(node);
+      state.data.xrefTarget = prevTarget;
       return;
     }
     const { label, identifier } = normalizeLabel(node.id) ?? {};
@@ -407,7 +410,7 @@ const handlers: Record<string, Handler> = {
     state.data.isInContainer = wasInContainer;
   },
   table(node, state) {
-    state.openNode('table');
+    state.openNode('table', state.data.xrefTarget);
     state.renderChildren(node);
     state.closeNode();
   },

@@ -14,6 +14,21 @@ cases:
     expect_no_warn_contains:
       - Unknown xref ref-type
 
+  - title: xref ref-type Table resolves to bare table image target
+    jats: |-
+      <p>See <xref ref-type="Table" rid="utbl1">Table S1</xref>.</p>
+      <table-wrap id="utbl1"><graphic xlink:href="utbl1.tif"/></table-wrap>
+    mdast:
+      type: crossReference
+      kind: table
+      label: utbl1
+      identifier: utbl1
+      children:
+        - type: text
+          value: Table S1
+    expect_no_warn_contains:
+      - Unknown xref ref-type
+
   - title: xref ref-type figure coerces to fig cross-reference
     jats: |-
       <p>See <xref ref-type="figure" rid="fig1">Figure 1</xref>.</p>

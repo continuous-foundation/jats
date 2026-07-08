@@ -26,6 +26,8 @@ export type Options = {
 
 export type StateData = {
   isInContainer?: boolean;
+  /** label/identifier from table-wrap when rendering without a container */
+  xrefTarget?: { label?: string; identifier?: string };
 };
 
 export interface IJatsParser<D extends Record<string, any> = StateData> {
