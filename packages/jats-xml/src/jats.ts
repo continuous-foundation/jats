@@ -6,7 +6,12 @@ import type { Element, DeclarationAttributes } from 'xml-js';
 import { validatePageFrontmatter, type PageFrontmatter } from 'myst-frontmatter';
 import { select as unistSelect, selectAll } from 'unist-util-select';
 import { Tags } from 'jats-tags';
-import { findArticleId, normalizeSubject, processAffiliation, processContributor } from './utils.js';
+import {
+  findArticleId,
+  normalizeSubject,
+  processAffiliation,
+  processContributors,
+} from './utils.js';
 import type {
   Front,
   Body,
@@ -178,7 +183,7 @@ export class Jats {
     const subtitle = this.articleSubtitle;
     const short_title = this.articleAltTitle;
     const titleText = title ? toText(title).trim() : '';
-    const authors = (this.articleAuthors ?? []).map((auth) => processContributor(auth));
+    const authors = processContributors(this.articleAuthors ?? [], this.front);
     const { date, datePick } = this.resolvePublicationDate();
     this.recordFrontmatterMessages({
       date,

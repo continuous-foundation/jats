@@ -245,6 +245,127 @@ cases:
       affiliations:
         - id: aff2
           name: Department of Physiology, University of California San Francisco, San Francisco, California, United States of America
+  - title: corresponding author email from author-notes corresp xref
+    jats: |-
+      <!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Archiving and Interchange DTD v1.0 20120330//EN" "JATS-archivearticle1.dtd">
+      <article><front>
+      <contrib-group>
+      <contrib contrib-type="author" corresp="yes">
+      <contrib-id contrib-id-type="orcid">http://orcid.org/0000-0001-5868-348X</contrib-id>
+      <name><surname>Gradinaru</surname><given-names>Viviana</given-names></name>
+      <xref ref-type="aff" rid="a1">1</xref>
+      <xref ref-type="aff" rid="a2">2</xref>
+      <xref ref-type="corresp" rid="cor1">*</xref>
+      </contrib>
+      </contrib-group>
+      <aff id="a1"><label>1</label><institution>Division of Biology and Biological Engineering, California Institute of Technology</institution>, Pasadena, CA 91125, <country>USA</country></aff>
+      <aff id="a2"><label>2</label><institution>Aligning Science Across Parkinson&#x2019;s (ASAP) Collaborative Research Network</institution>, Chevy Chase, MD 20815, <country>USA</country></aff>
+      <author-notes>
+      <corresp id="cor1"><label>*</label>Correspondence: <email>viviana@caltech.edu</email></corresp>
+      </author-notes>
+      </front></article>
+    frontmatter:
+      authors:
+        - name: Viviana Gradinaru
+          orcid: 0000-0001-5868-348X
+          corresponding: true
+          email: viviana@caltech.edu
+          affiliations:
+            - a1
+            - a2
+      affiliations:
+        - id: a1
+          name: Division of Biology and Biological Engineering, California Institute of Technology, Pasadena, CA 91125
+          country: USA
+        - id: a2
+          name: "Aligning Science Across Parkinson\u2019s (ASAP) Collaborative Research Network, Chevy Chase, MD 20815"
+          country: USA
+  - title: corresponding author email without corresp=yes attribute
+    jats: |-
+      <!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Archiving and Interchange DTD v1.0 20120330//EN" "JATS-archivearticle1.dtd">
+      <article><front>
+      <contrib-group>
+      <contrib contrib-type="author">
+      <name><surname>Gross</surname><given-names>Steven P</given-names></name>
+      <xref ref-type="corresp" rid="cor1">*</xref>
+      </contrib>
+      </contrib-group>
+      <author-notes>
+      <corresp id="cor1"><label>*</label>For correspondence: <email>sgross@uci.edu</email></corresp>
+      </author-notes>
+      </front></article>
+    frontmatter:
+      authors:
+        - name: Steven P Gross
+          corresponding: true
+          email: sgross@uci.edu
+  - title: multiple corresponding authors share corresp emails in order
+    jats: |-
+      <!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Archiving and Interchange DTD v1.0 20120330//EN" "JATS-archivearticle1.dtd">
+      <article><front>
+      <contrib-group>
+      <contrib contrib-type="author" corresp="yes">
+      <name><surname>Yoneshiro</surname><given-names>Takeshi</given-names></name>
+      <xref ref-type="corresp" rid="cor1">5</xref>
+      </contrib>
+      <contrib contrib-type="author" corresp="yes">
+      <name><surname>Kajimura</surname><given-names>Shingo</given-names></name>
+      <xref ref-type="corresp" rid="cor1">5</xref>
+      </contrib>
+      </contrib-group>
+      <author-notes>
+      <corresp id="cor1"><label>5</label>Corresponding Takeshi Yoneshiro: <email>yoneshiro.takeshi@lsbm.org</email>, Shingo Kajimura: <email>skajimur@bidmc.harvard.edu</email></corresp>
+      </author-notes>
+      </front></article>
+    frontmatter:
+      authors:
+        - name: Takeshi Yoneshiro
+          corresponding: true
+          email: yoneshiro.takeshi@lsbm.org
+        - name: Shingo Kajimura
+          corresponding: true
+          email: skajimur@bidmc.harvard.edu
+  - title: equal-contrib yes sets equal_contributor on authors
+    jats: |-
+      <!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Archiving and Interchange DTD v1.0 20120330//EN" "JATS-archivearticle1.dtd">
+      <article><front>
+      <contrib-group>
+      <contrib contrib-type="author" equal-contrib="yes">
+      <contrib-id contrib-id-type="orcid">http://orcid.org/0000-0003-3482-3841</contrib-id>
+      <name><surname>Reyes-Ordo&#x00F1;ez</surname><given-names>Adriana</given-names></name>
+      <xref ref-type="aff" rid="a1">1</xref>
+      <xref ref-type="author-notes" rid="n1">8</xref>
+      </contrib>
+      <contrib contrib-type="author" equal-contrib="yes">
+      <contrib-id contrib-id-type="orcid">http://orcid.org/0000-0002-2290-9632</contrib-id>
+      <name><surname>Zhou</surname><given-names>Tianhui Hina</given-names></name>
+      <xref ref-type="aff" rid="a2">2</xref>
+      <xref ref-type="author-notes" rid="n1">8</xref>
+      </contrib>
+      </contrib-group>
+      <aff id="a1"><label>1</label><institution>First affiliation</institution></aff>
+      <aff id="a2"><label>2</label><institution>Second affiliation</institution></aff>
+      <author-notes>
+      <fn id="n1" fn-type="others"><label>8</label><p>These authors contributed equally.</p></fn>
+      </author-notes>
+      </front></article>
+    frontmatter:
+      authors:
+        - name: Adriana Reyes-Ordoñez
+          orcid: 0000-0003-3482-3841
+          equal_contributor: true
+          affiliations:
+            - a1
+        - name: Tianhui Hina Zhou
+          orcid: 0000-0002-2290-9632
+          equal_contributor: true
+          affiliations:
+            - a2
+      affiliations:
+        - id: a1
+          name: First affiliation
+        - id: a2
+          name: Second affiliation
   - title: <article-categories> prefers hwp-journal-coll subject over first
     jats: |-
       <!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Archiving and Interchange DTD v1.0 20120330//EN" "JATS-archivearticle1.dtd">

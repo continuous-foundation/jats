@@ -38,7 +38,45 @@ export function findArticleId(
   return toText(doiTag) || undefined;
 }
 
-export function processContributor(contrib: Contrib): ContributorFM {
+export function buildCorrespEmailLookup(front?: GenericParent): Record<string, string[]> {
+  if (!front) return {};
+  const lookup: Record<string, string[]> = {};
+  selectAll('author-notes corresp[id]', front).forEach((node) => {
+    const corresp = node as GenericNode;
+    const id = corresp.id;
+    if (!id) return;
+    const emails = selectAll('email', corresp)
+      .map((emailNode) => toTextAndTrim(emailNode))
+      .filter((email): email is string => !!email);
+    if (emails.length) lookup[id] = emails;
+  });
+  return lookup;
+}
+
+export type CorrespEmailState = {
+  lists: Record<string, string[]>;
+  index: Record<string, number>;
+};
+
+function takeCorrespEmail(correspRefs: Xref[], state?: CorrespEmailState): string | undefined {
+  if (!state) return undefined;
+  for (const xref of correspRefs) {
+    const rid = xref.rid;
+    if (!rid) continue;
+    const emails = state.lists[rid];
+    if (!emails?.length) continue;
+    const at = state.index[rid] ?? 0;
+    const email = emails[at];
+    if (email) state.index[rid] = at + 1;
+    return email;
+  }
+  return undefined;
+}
+
+export function processContributor(
+  contrib: Contrib,
+  opts?: { correspEmails?: CorrespEmailState },
+): ContributorFM {
   const author: ContributorFM = {
     name: `${toText(select(Tags.givenNames, contrib))} ${toText(select(Tags.surname, contrib))}`,
   };
@@ -55,8 +93,32 @@ export function processContributor(contrib: Contrib): ContributorFM {
   if (uri?.['xlink:href']) {
     author.url = uri['xlink:href'];
   }
+  const correspRefs = selectAll('xref[ref-type=corresp]', contrib) as Xref[];
+  const isCorresponding =
+    String(contrib.corresp ?? '').toLowerCase() === 'yes' || correspRefs.length > 0;
+  if (isCorresponding) {
+    author.corresponding = true;
+  }
+  if (String(contrib['equal-contrib'] ?? '').toLowerCase() === 'yes') {
+    author.equal_contributor = true;
+  }
+  let email = toTextAndTrim(select('email', contrib));
+  if (!email) {
+    email = takeCorrespEmail(correspRefs, opts?.correspEmails);
+  }
+  if (email) {
+    author.email = email;
+  }
   // If there are no aff xrefs AND contrib is in a contrib group with affs AND those affs do not have IDs, add them as affiliations...
   return author;
+}
+
+export function processContributors(contribs: Contrib[], front?: GenericParent): ContributorFM[] {
+  const correspEmails: CorrespEmailState = {
+    lists: buildCorrespEmailLookup(front),
+    index: {},
+  };
+  return contribs.map((contrib) => processContributor(contrib, { correspEmails }));
 }
 
 /**
