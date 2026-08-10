@@ -1,5 +1,14 @@
 # meca
 
+## 1.1.9
+
+### Patch Changes
+
+- Updated dependencies [7cfe4d7]
+- Updated dependencies [7cfe4d7]
+  - jats-xml@1.1.9
+  - jats-utils@1.1.9
+
 ## 1.1.8
 
 ### Patch Changes
