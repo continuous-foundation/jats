@@ -215,14 +215,15 @@ cases:
       - Could not determine container enumerator from id or label
 
   - source: table-mixed-enumeration
-    title: mix of enumerated and non-enumerated tables warns once
+    title: mix of enumerated and non-enumerated table containers warns once
     jats: |-
       <table-wrap id="tbl1">
         <label>Table 1</label>
         <table><tbody><tr><td>a</td></tr></tbody></table>
       </table-wrap>
       <table-wrap id="custom-table-id">
-        <table><tbody><tr><td>b</td></tr></tbody></table>
+        <caption><p>Supplementary notes.</p></caption>
+        <graphic xlink:href="tbl-s.tif"/>
       </table-wrap>
     mdast:
       type: container
@@ -233,7 +234,7 @@ cases:
       - Could not determine container enumerator from id or label
 
   - source: figures-enumerated-tables-not
-    title: all figures enumerated and all tables non-enumerated is fine
+    title: all figures enumerated and id-only table-wraps without containers is fine
     jats: |-
       <fig id="fig1" position="float">
         <label>Figure 1</label>
