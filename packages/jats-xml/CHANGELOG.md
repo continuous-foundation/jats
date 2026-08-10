@@ -1,5 +1,14 @@
 # jats-xml
 
+## 1.1.9
+
+### Patch Changes
+
+- 7cfe4d7: More author emails and equal_contributor schemas
+- 7cfe4d7: Normalize subjects
+  - jats-tags@1.1.9
+  - jats-utils@1.1.9
+
 ## 1.1.8
 
 ### Patch Changes
